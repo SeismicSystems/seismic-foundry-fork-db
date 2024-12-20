@@ -55,3 +55,7 @@ url = "2"
 alloy-rpc-client = "0.8"
 alloy-transport-http = "0.8"
 tiny_http = "0.12"
+
+[patch.crates-io]
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b71e7efb" }
