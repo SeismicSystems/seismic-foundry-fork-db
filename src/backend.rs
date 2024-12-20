@@ -1,11 +1,15 @@
-//! Smart caching and deduplication of requests when using a forking provider
+//! Smart caching and deduplication of requests when using a forking provider.
+
 use crate::{
     cache::{BlockchainDb, FlushJsonBlockCacheDB, MemDb, StorageInfo},
     error::{DatabaseError, DatabaseResult},
 };
 use alloy_primitives::{keccak256, Address, Bytes, B256, U256};
-use alloy_provider::{network::AnyNetwork, Provider};
-use alloy_rpc_types::{Block, BlockId, Transaction};
+use alloy_provider::{
+    network::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope},
+    Provider,
+};
+use alloy_rpc_types::{BlockId, Transaction};
 use alloy_serde::WithOtherFields;
 use alloy_transport::Transport;
 use eyre::WrapErr;
@@ -17,11 +21,13 @@ use futures::{
 };
 use revm::{
     db::DatabaseRef,
-    primitives::{AccountInfo, Bytecode, HashMap as Map, KECCAK_EMPTY},
+    primitives::{
+        map::{hash_map::Entry, AddressHashMap, HashMap}, AccountInfo, Bytecode, FlaggedStorage, KECCAK_EMPTY
+    },
 };
-use rustc_hash::FxHashMap;
 use std::{
-    collections::{hash_map::Entry, HashMap, VecDeque},
+    collections::VecDeque,
+    fmt,
     future::IntoFuture,
     marker::PhantomData,
     path::Path,
@@ -44,33 +50,59 @@ type AccountFuture<Err> =
 type StorageFuture<Err> = Pin<Box<dyn Future<Output = (Result<U256, Err>, Address, U256)> + Send>>;
 type BlockHashFuture<Err> = Pin<Box<dyn Future<Output = (Result<B256, Err>, u64)> + Send>>;
 type FullBlockFuture<Err> = Pin<
-    Box<
-        dyn Future<
-                Output = (
-                    FullBlockSender,
-                    Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>, Err>,
-                    BlockId,
-                ),
-            > + Send,
-    >,
+    Box<dyn Future<Output = (FullBlockSender, Result<Option<AnyRpcBlock>, Err>, BlockId)> + Send>,
 >;
-type TransactionFuture<Err> = Pin<
-    Box<
-        dyn Future<Output = (TransactionSender, Result<WithOtherFields<Transaction>, Err>, B256)>
-            + Send,
-    >,
->;
+type TransactionFuture<Err> =
+    Pin<Box<dyn Future<Output = (TransactionSender, Result<AnyRpcTransaction, Err>, B256)> + Send>>;
 
 type AccountInfoSender = OneshotSender<DatabaseResult<AccountInfo>>;
 type StorageSender = OneshotSender<DatabaseResult<U256>>;
 type BlockHashSender = OneshotSender<DatabaseResult<B256>>;
-type FullBlockSender =
-    OneshotSender<DatabaseResult<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
-type TransactionSender = OneshotSender<DatabaseResult<WithOtherFields<Transaction>>>;
+type FullBlockSender = OneshotSender<DatabaseResult<AnyRpcBlock>>;
+type TransactionSender = OneshotSender<DatabaseResult<AnyRpcTransaction>>;
 
-type AddressData = Map<Address, AccountInfo>;
-type StorageData = Map<Address, StorageInfo>;
-type BlockHashData = Map<U256, B256>;
+type AddressData = AddressHashMap<AccountInfo>;
+type StorageData = AddressHashMap<StorageInfo>;
+type BlockHashData = HashMap<U256, B256>;
+
+struct AnyRequestFuture<T, Err> {
+    sender: OneshotSender<Result<T, Err>>,
+    future: Pin<Box<dyn Future<Output = Result<T, Err>> + Send>>,
+}
+
+impl<T, Err> fmt::Debug for AnyRequestFuture<T, Err> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("AnyRequestFuture").field(&self.sender).finish()
+    }
+}
+
+trait WrappedAnyRequest: Unpin + Send + fmt::Debug {
+    fn poll_inner(&mut self, cx: &mut Context<'_>) -> Poll<()>;
+}
+
+/// @dev Implements `WrappedAnyRequest` for `AnyRequestFuture`.
+///
+/// - `poll_inner` is similar to `Future` polling but intentionally consumes the Future<Output=T>
+///   and return Future<Output=()>
+/// - This design avoids storing `Future<Output = T>` directly, as its type may not be known at
+///   compile time.
+/// - Instead, the result (`Result<T, Err>`) is sent via the `sender` channel, which enforces type
+///   safety.
+impl<T, Err> WrappedAnyRequest for AnyRequestFuture<T, Err>
+where
+    T: fmt::Debug + Send + 'static,
+    Err: fmt::Debug + Send + 'static,
+{
+    fn poll_inner(&mut self, cx: &mut Context<'_>) -> Poll<()> {
+        match self.future.poll_unpin(cx) {
+            Poll::Ready(result) => {
+                let _ = self.sender.send(result);
+                Poll::Ready(())
+            }
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
 
 /// Request variants that are executed by the provider
 enum ProviderRequest<Err> {
@@ -79,6 +111,7 @@ enum ProviderRequest<Err> {
     BlockHash(BlockHashFuture<Err>),
     FullBlock(FullBlockFuture<Err>),
     Transaction(TransactionFuture<Err>),
+    AnyRequest(Box<dyn WrappedAnyRequest>),
 }
 
 /// The Request type the Backend listens for
@@ -103,6 +136,8 @@ enum BackendRequest {
     UpdateStorage(StorageData),
     /// Update Block Hashes
     UpdateBlockHash(BlockHashData),
+    /// Any other request
+    AnyRequest(Box<dyn WrappedAnyRequest>),
 }
 
 /// Handles an internal provider and listens for requests.
@@ -122,7 +157,7 @@ pub struct BackendHandler<T, P> {
     /// Listeners that wait for a `get_storage_at` response
     storage_requests: HashMap<(Address, U256), Vec<StorageSender>>,
     /// Listeners that wait for a `get_block` response
-    block_requests: FxHashMap<u64, Vec<BlockHashSender>>,
+    block_requests: HashMap<u64, Vec<BlockHashSender>>,
     /// Incoming commands.
     incoming: UnboundedReceiver<BackendRequest>,
     /// unprocessed queued requests
@@ -216,6 +251,9 @@ where
                 for (block, hash) in block_hash_data {
                     self.db.block_hashes().write().insert(block, hash);
                 }
+            }
+            BackendRequest::AnyRequest(fut) => {
+                self.pending_requests.push(ProviderRequest::AnyRequest(fut));
             }
         }
     }
@@ -315,7 +353,10 @@ where
                 let provider = self.provider.clone();
                 let fut = Box::pin(async move {
                     let block = provider
-                        .get_block_by_number(number.into(), false)
+                        .get_block_by_number(
+                            number.into(),
+                            alloy_rpc_types::BlockTransactionsKind::Hashes,
+                        )
                         .await
                         .wrap_err("failed to get block");
 
@@ -509,6 +550,11 @@ where
                             continue;
                         }
                     }
+                    ProviderRequest::AnyRequest(fut) => {
+                        if fut.poll_inner(cx).is_ready() {
+                            continue;
+                        }
+                    }
                 }
                 // not ready, insert and poll again
                 pin.pending_requests.push(request);
@@ -523,13 +569,18 @@ where
     }
 }
 
-/// mode for the `SharedBackend` to block or not block when interacting with the `BackendHandler`
+/// Mode for the `SharedBackend` how to block in the non-async [`DatabaseRef`] when interacting with
+/// [`BackendHandler`].
 #[derive(Default, Clone, Debug, PartialEq)]
 pub enum BlockingMode {
-    /// the mode use `tokio::task::block_in_place()` to block in place
+    /// This mode use `tokio::task::block_in_place()` to block in place.
+    ///
+    /// This should be used when blocking on the call site is disallowed.
     #[default]
     BlockInPlace,
-    /// the mode blocks the current task
+    /// The mode blocks the current task
+    ///
+    /// This can be used if blocking on the call site is allowed, e.g. on a tokio blocking task.
     Block,
 }
 
@@ -671,10 +722,7 @@ impl SharedBackend {
     }
 
     /// Returns the full block for the given block identifier
-    pub fn get_full_block(
-        &self,
-        block: impl Into<BlockId>,
-    ) -> DatabaseResult<WithOtherFields<Block<WithOtherFields<Transaction>>>> {
+    pub fn get_full_block(&self, block: impl Into<BlockId>) -> DatabaseResult<AnyRpcBlock> {
         self.blocking_mode.run(|| {
             let (sender, rx) = oneshot_channel();
             let req = BackendRequest::FullBlock(block.into(), sender);
@@ -684,7 +732,10 @@ impl SharedBackend {
     }
 
     /// Returns the transaction for the hash
-    pub fn get_transaction(&self, tx: B256) -> DatabaseResult<WithOtherFields<Transaction>> {
+    pub fn get_transaction(
+        &self,
+        tx: B256,
+    ) -> DatabaseResult<WithOtherFields<Transaction<AnyTxEnvelope>>> {
         self.blocking_mode.run(|| {
             let (sender, rx) = oneshot_channel();
             let req = BackendRequest::Transaction(tx, sender);
@@ -756,6 +807,23 @@ impl SharedBackend {
         }
     }
 
+    /// Returns any arbitrary request on the provider
+    pub fn do_any_request<T, F>(&mut self, fut: F) -> DatabaseResult<T>
+    where
+        F: Future<Output = Result<T, eyre::Report>> + Send + 'static,
+        T: fmt::Debug + Send + 'static,
+    {
+        self.blocking_mode.run(|| {
+            let (sender, rx) = oneshot_channel::<Result<T, eyre::Report>>();
+            let req = BackendRequest::AnyRequest(Box::new(AnyRequestFuture {
+                sender,
+                future: Box::pin(fut),
+            }));
+            self.backend.unbounded_send(req)?;
+            rx.recv()?.map_err(|err| DatabaseError::AnyRequest(Arc::new(err)))
+        })
+    }
+
     /// Flushes the DB to disk if caching is enabled
     pub fn flush_cache(&self) {
         self.cache.0.flush();
@@ -820,7 +888,7 @@ impl DatabaseRef for SharedBackend {
         Err(DatabaseError::MissingCode(hash))
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         trace!(target: "sharedbackend", "request storage {:?} at {:?}", address, index);
         self.do_get_storage(address, index).map_err(|err| {
             error!(target: "sharedbackend", %err, %address, %index, "Failed to send/recv `storage`");
@@ -828,7 +896,7 @@ impl DatabaseRef for SharedBackend {
                 error!(target: "sharedbackend", "{NON_ARCHIVE_NODE_WARNING}");
             }
           err
-        })
+        }).map(|v| v.into())
     }
 
     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
@@ -850,7 +918,9 @@ mod tests {
     use alloy_provider::{ProviderBuilder, RootProvider};
     use alloy_rpc_client::ClientBuilder;
     use alloy_transport_http::{Client, Http};
+    use serde::Deserialize;
     use std::{collections::BTreeSet, fs, path::PathBuf};
+    use tiny_http::{Response, Server};
 
     pub fn get_http_provider(endpoint: &str) -> RootProvider<Http<Client>, AnyNetwork> {
         ProviderBuilder::new()
@@ -859,6 +929,19 @@ mod tests {
     }
 
     const ENDPOINT: Option<&str> = option_env!("ETH_RPC_URL");
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_builder() {
+        let Some(endpoint) = ENDPOINT else { return };
+        let provider = get_http_provider(endpoint);
+
+        let any_rpc_block = provider
+            .get_block(BlockId::latest(), alloy_rpc_types::BlockTransactionsKind::Hashes)
+            .await
+            .unwrap()
+            .unwrap();
+        let _meta = BlockchainDbMeta::default().with_block(&any_rpc_block.inner);
+    }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn shared_backend() {
@@ -886,7 +969,7 @@ mod tests {
         assert_eq!(account.nonce, mem_acc.nonce);
         let slots = db.storage().read().get(&address).unwrap().clone();
         assert_eq!(slots.len(), 1);
-        assert_eq!(slots.get(&idx).copied().unwrap(), value);
+        assert_eq!(slots.get(&idx).copied().unwrap(), value.into());
 
         let num = 10u64;
         let hash = backend.block_hash_ref(num).unwrap();
@@ -935,7 +1018,7 @@ mod tests {
             code: None,
             code_hash: KECCAK_EMPTY,
         };
-        let mut account_data: AddressData = Map::new();
+        let mut account_data = AddressData::default();
         account_data.insert(address, new_acc.clone());
 
         backend.insert_or_update_address(account_data);
@@ -999,8 +1082,8 @@ mod tests {
         // some rng contract from etherscan
         let address: Address = "63091244180ae240c87d1f528f5f269134cb07b3".parse().unwrap();
 
-        let mut storage_data: StorageData = Map::new();
-        let mut storage_info: StorageInfo = Map::new();
+        let mut storage_data = StorageData::default();
+        let mut storage_info = StorageInfo::default();
         storage_info.insert(U256::from(20), U256::from(10));
         storage_info.insert(U256::from(30), U256::from(15));
         storage_info.insert(U256::from(40), U256::from(20));
@@ -1062,7 +1145,7 @@ mod tests {
         // some rng contract from etherscan
         // let address: Address = "63091244180ae240c87d1f528f5f269134cb07b3".parse().unwrap();
 
-        let mut block_hash_data: BlockHashData = Map::new();
+        let mut block_hash_data = BlockHashData::default();
         block_hash_data.insert(U256::from(1), B256::from(U256::from(1)));
         block_hash_data.insert(U256::from(2), B256::from(U256::from(2)));
         block_hash_data.insert(U256::from(3), B256::from(U256::from(3)));
@@ -1123,8 +1206,8 @@ mod tests {
         // some rng contract from etherscan
         let address: Address = "63091244180ae240c87d1f528f5f269134cb07b3".parse().unwrap();
 
-        let mut storage_data: StorageData = Map::new();
-        let mut storage_info: StorageInfo = Map::new();
+        let mut storage_data = StorageData::default();
+        let mut storage_info = StorageInfo::default();
         storage_info.insert(U256::from(1), U256::from(10));
         storage_info.insert(U256::from(2), U256::from(15));
         storage_info.insert(U256::from(3), U256::from(20));
@@ -1143,7 +1226,7 @@ mod tests {
         // nullify the code
         new_acc.code = Some(Bytecode::new_raw(([10, 20, 30, 40]).into()));
 
-        let mut account_data: AddressData = Map::new();
+        let mut account_data = AddressData::default();
         account_data.insert(address, new_acc.clone());
 
         backend.insert_or_update_address(account_data);
@@ -1194,8 +1277,8 @@ mod tests {
 
         let json_db = BlockchainDb::new(meta, Some(cache_path));
 
-        let mut storage_data: StorageData = Map::new();
-        let mut storage_info: StorageInfo = Map::new();
+        let mut storage_data = StorageData::default();
+        let mut storage_info = StorageInfo::default();
         storage_info.insert(U256::from(1), U256::from(10));
         storage_info.insert(U256::from(2), U256::from(15));
         storage_info.insert(U256::from(3), U256::from(20));
@@ -1231,5 +1314,59 @@ mod tests {
 
         // erase the temporary file
         fs::remove_file("test-data/storage-tmp.json").unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn shared_backend_any_request() {
+        let expected_response_bytes: Bytes = vec![0xff, 0xee].into();
+        let server = Server::http("0.0.0.0:0").expect("failed starting in-memory http server");
+        let endpoint = format!("http://{}", server.server_addr());
+
+        // Spin an in-memory server that responds to "foo_callCustomMethod" rpc call.
+        let expected_bytes_innner = expected_response_bytes.clone();
+        let server_handle = std::thread::spawn(move || {
+            #[derive(Debug, Deserialize)]
+            struct Request {
+                method: String,
+            }
+            let mut request = server.recv().unwrap();
+            let rpc_request: Request =
+                serde_json::from_reader(request.as_reader()).expect("failed parsing request");
+
+            match rpc_request.method.as_str() {
+                "foo_callCustomMethod" => request
+                    .respond(Response::from_string(format!(
+                        r#"{{"result": "{}"}}"#,
+                        alloy_primitives::hex::encode_prefixed(expected_bytes_innner),
+                    )))
+                    .unwrap(),
+                _ => request
+                    .respond(Response::from_string(r#"{"error": "invalid request"}"#))
+                    .unwrap(),
+            };
+        });
+
+        let provider = get_http_provider(&endpoint);
+        let meta = BlockchainDbMeta {
+            cfg_env: Default::default(),
+            block_env: Default::default(),
+            hosts: BTreeSet::from([endpoint.to_string()]),
+        };
+
+        let db = BlockchainDb::new(meta, None);
+        let provider_inner = provider.clone();
+        let mut backend = SharedBackend::spawn_backend(Arc::new(provider), db.clone(), None).await;
+
+        let actual_response_bytes = backend
+            .do_any_request(async move {
+                let bytes: alloy_primitives::Bytes =
+                    provider_inner.raw_request("foo_callCustomMethod".into(), vec!["0001"]).await?;
+                Ok(bytes)
+            })
+            .expect("failed performing any request");
+
+        assert_eq!(actual_response_bytes, expected_response_bytes);
+
+        server_handle.join().unwrap();
     }
 }

@@ -5,19 +5,127 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.1](https://github.com/foundry-rs/foundry-fork-db
-/releases/tag/v0.3.1) - 2024-09-21
+## [0.9.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.9.0) - 2024-12-10
+
+### Dependencies
+
+- Bump alloy 0.8 ([#38](https://github.com/foundry-rs/foundry-fork-db/issues/38))
+- Bump MSRV to 1.81 ([#37](https://github.com/foundry-rs/foundry-fork-db/issues/37))
+- Bump breaking deps ([#36](https://github.com/foundry-rs/foundry-fork-db/issues/36))
+
+### Miscellaneous Tasks
+
+- Update deny.toml ([#35](https://github.com/foundry-rs/foundry-fork-db/issues/35))
+
+### Other
+
+- Move deny to ci ([#34](https://github.com/foundry-rs/foundry-fork-db/issues/34))
+
+## [0.8.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.8.0) - 2024-11-28
+
+### Dependencies
+
+- Bump alloy ([#33](https://github.com/foundry-rs/foundry-fork-db/issues/33))
+
+### Miscellaneous Tasks
+
+- Release 0.8.0
+
+## [0.7.2](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.7.2) - 2024-11-27
+
+### Documentation
+
+- Fix typo in changelog generator 2
+- Fix typo in changelog generator
+
+### Features
+
+- [backend] Add support for arbitrary provider requests with AnyRequest ([#32](https://github.com/foundry-rs/foundry-fork-db/issues/32))
+
+### Miscellaneous Tasks
+
+- Release 0.7.2
+
+## [0.7.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.7.1) - 2024-11-09
+
+### Bug Fixes
+
+- Accept generic header in meta builder ([#30](https://github.com/foundry-rs/foundry-fork-db/issues/30))
+
+### Miscellaneous Tasks
+
+- Release 0.7.1
+
+## [0.7.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.7.0) - 2024-11-08
+
+### Dependencies
+
+- [deps] Bump alloy 0.6.2 ([#29](https://github.com/foundry-rs/foundry-fork-db/issues/29))
+
+### Documentation
+
+- Update docs
+
+### Miscellaneous Tasks
+
+- Release 0.7.0
+
+## [0.6.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.6.0) - 2024-10-23
+
+### Dependencies
+
+- Bump revm ([#27](https://github.com/foundry-rs/foundry-fork-db/issues/27))
+
+### Miscellaneous Tasks
+
+- Release 0.6.0
+
+## [0.5.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.5.0) - 2024-10-18
+
+### Dependencies
+
+- Bump alloy 0.5 ([#26](https://github.com/foundry-rs/foundry-fork-db/issues/26))
+
+### Miscellaneous Tasks
+
+- Release 0.5.0
+
+## [0.4.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.4.0) - 2024-09-30
+
+### Dependencies
+
+- Bump alloy 0.4 ([#24](https://github.com/foundry-rs/foundry-fork-db/issues/24))
+
+### Miscellaneous Tasks
+
+- Release 0.4.0
+
+## [0.3.2](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.3.2) - 2024-09-29
+
+### Features
+
+- BlockchainDbMeta builder ([#22](https://github.com/foundry-rs/foundry-fork-db/issues/22))
+
+### Miscellaneous Tasks
+
+- Release 0.3.2
+- Use more alloy_primitives::map
+
+## [0.3.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.3.1) - 2024-09-21
 
 ### Dependencies
 
 - [deps] Disable default features for revm ([#20](https://github.com/foundry-rs/foundry-fork-db/issues/20))
 
+### Miscellaneous Tasks
+
+- Release 0.3.1
+
 ### Other
 
 - Don't deploy docs
 
-## [0.3.0](https://github.com/foundry-rs/foundry-fork-db
-/releases/tag/v0.3.0) - 2024-08-29
+## [0.3.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.3.0) - 2024-08-29
 
 ### Bug Fixes
 
@@ -39,8 +147,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rm clone
 - Replace bounded channel with unbounded channel
 
-## [0.2.1](https://github.com/foundry-rs/foundry-fork-db
-/releases/tag/v0.2.1) - 2024-08-08
+## [0.2.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.2.1) - 2024-08-08
 
 ### Bug Fixes
 
@@ -94,8 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactor and storage update
 - Refactoring
 
-## [0.2.0](https://github.com/foundry-rs/foundry-fork-db
-/releases/tag/v0.2.0) - 2024-07-17
+## [0.2.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.2.0) - 2024-07-17
 
 ### Dependencies
 
@@ -114,8 +220,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add documentation
 - Add flush to arbitrary file
 
-## [0.1.1](https://github.com/foundry-rs/foundry-fork-db
-/releases/tag/v0.1.1) - 2024-07-15
+## [0.1.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.1.1) - 2024-07-15
 
 ### Dependencies
 
@@ -133,8 +238,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove redundant check
 - Update Cargo.toml according to the reviews
 
-## [0.1.0](https://github.com/foundry-rs/foundry-fork-db
-/releases/tag/v0.1.0) - 2024-07-02
+## [0.1.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.1.0) - 2024-07-02
 
 ### Bug Fixes
 
