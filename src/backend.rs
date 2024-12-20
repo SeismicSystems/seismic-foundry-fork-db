@@ -22,8 +22,7 @@ use futures::{
 use revm::{
     db::DatabaseRef,
     primitives::{
-        map::{hash_map::Entry, AddressHashMap, HashMap},
-        AccountInfo, Bytecode, KECCAK_EMPTY,
+        map::{hash_map::Entry, AddressHashMap, HashMap}, AccountInfo, Bytecode, FlaggedStorage, KECCAK_EMPTY
     },
 };
 use std::{
@@ -889,7 +888,7 @@ impl DatabaseRef for SharedBackend {
         Err(DatabaseError::MissingCode(hash))
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         trace!(target: "sharedbackend", "request storage {:?} at {:?}", address, index);
         self.do_get_storage(address, index).map_err(|err| {
             error!(target: "sharedbackend", %err, %address, %index, "Failed to send/recv `storage`");
@@ -897,7 +896,7 @@ impl DatabaseRef for SharedBackend {
                 error!(target: "sharedbackend", "{NON_ARCHIVE_NODE_WARNING}");
             }
           err
-        })
+        }).map(|v| v.into())
     }
 
     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
@@ -970,7 +969,7 @@ mod tests {
         assert_eq!(account.nonce, mem_acc.nonce);
         let slots = db.storage().read().get(&address).unwrap().clone();
         assert_eq!(slots.len(), 1);
-        assert_eq!(slots.get(&idx).copied().unwrap(), value);
+        assert_eq!(slots.get(&idx).copied().unwrap(), value.into());
 
         let num = 10u64;
         let hash = backend.block_hash_ref(num).unwrap();
