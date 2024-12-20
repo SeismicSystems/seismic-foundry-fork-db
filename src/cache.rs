@@ -353,7 +353,7 @@ impl MemDb {
                     if value.present_value().is_zero() {
                         acc_storage.remove(&index);
                     } else {
-                        acc_storage.insert(index, value.present_value());
+                        acc_storage.insert(index, value.present_value().into());
                     }
                 }
                 if acc_storage.is_empty() {
