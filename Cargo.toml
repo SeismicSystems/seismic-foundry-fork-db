@@ -58,4 +58,4 @@ tiny_http = "0.12"
 
 [patch.crates-io]
 alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a772c2e" }
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b125c7f" }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "caf5496f" }
