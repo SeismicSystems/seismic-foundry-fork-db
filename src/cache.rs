@@ -5,8 +5,7 @@ use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
     primitives::{
-        map::{AddressHashMap, HashMap},
-        Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv, KECCAK_EMPTY,
+        map::{AddressHashMap, HashMap}, Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv, FlaggedStorage, KECCAK_EMPTY
     },
     DatabaseCommit,
 };
@@ -20,7 +19,7 @@ use std::{
 };
 use url::Url;
 
-pub type StorageInfo = HashMap<U256, U256>;
+pub type StorageInfo = HashMap<U256, FlaggedStorage>;
 
 /// A shareable Block database
 #[derive(Clone, Debug)]
@@ -501,7 +500,7 @@ impl<'de> Deserialize<'de> for JsonBlockCacheData {
         struct Data {
             meta: BlockchainDbMeta,
             accounts: AddressHashMap<AccountInfo>,
-            storage: AddressHashMap<HashMap<U256, U256>>,
+            storage: AddressHashMap<StorageInfo>,
             block_hashes: HashMap<U256, B256>,
         }
 

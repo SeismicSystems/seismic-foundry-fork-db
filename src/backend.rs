@@ -228,7 +228,7 @@ where
                 let value =
                     self.db.storage().read().get(&addr).and_then(|acc| acc.get(&idx).copied());
                 if let Some(value) = value {
-                    let _ = sender.send(Ok(value));
+                    let _ = sender.send(Ok(value.into()));
                 } else {
                     // account present but not storage -> fetch storage
                     self.request_account_storage(addr, idx, sender);
@@ -481,7 +481,7 @@ where
                             };
 
                             // update the cache
-                            pin.db.storage().write().entry(addr).or_default().insert(idx, value);
+                            pin.db.storage().write().entry(addr).or_default().insert(idx, value.into());
 
                             // notify all listeners
                             if let Some(listeners) = pin.storage_requests.remove(&(addr, idx)) {
@@ -1084,9 +1084,9 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(20), U256::from(10));
-        storage_info.insert(U256::from(30), U256::from(15));
-        storage_info.insert(U256::from(40), U256::from(20));
+        storage_info.insert(U256::from(20), U256::from(10).into());
+        storage_info.insert(U256::from(30), U256::from(15).into());
+        storage_info.insert(U256::from(40), U256::from(20).into());
 
         storage_data.insert(address, storage_info);
 
@@ -1101,7 +1101,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db, value.into(),
                                     "Storage in slot number {} in address {} do not have the same value", index, address
                                 );
 
@@ -1112,7 +1112,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result,
+                                    stg_db, db_result.into(),
                                     "Storage in slot number {} in address {} do not have the same value", index, address
                                 )
                             }
@@ -1208,12 +1208,12 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(1), U256::from(10));
-        storage_info.insert(U256::from(2), U256::from(15));
-        storage_info.insert(U256::from(3), U256::from(20));
-        storage_info.insert(U256::from(4), U256::from(20));
-        storage_info.insert(U256::from(5), U256::from(15));
-        storage_info.insert(U256::from(6), U256::from(10));
+        storage_info.insert(U256::from(1), U256::from(10).into());
+        storage_info.insert(U256::from(2), U256::from(15).into());
+        storage_info.insert(U256::from(3), U256::from(20).into());
+        storage_info.insert(U256::from(4), U256::from(20).into());
+        storage_info.insert(U256::from(5), U256::from(15).into());
+        storage_info.insert(U256::from(6), U256::from(10).into());
 
         let mut address_data = backend.basic_ref(address).unwrap().unwrap();
         address_data.code = None;
@@ -1242,7 +1242,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db, value.into(),
                                     "Storage in slot number {} in address {} doesn't have the same value", index, address
                                 );
 
@@ -1253,7 +1253,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result,
+                                    stg_db, db_result.into(),
                                     "Storage in slot number {} in address {} doesn't have the same value", index, address
                                 );
                             }
@@ -1279,12 +1279,12 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(1), U256::from(10));
-        storage_info.insert(U256::from(2), U256::from(15));
-        storage_info.insert(U256::from(3), U256::from(20));
-        storage_info.insert(U256::from(4), U256::from(20));
-        storage_info.insert(U256::from(5), U256::from(15));
-        storage_info.insert(U256::from(6), U256::from(10));
+        storage_info.insert(U256::from(1), U256::from(10).into());
+        storage_info.insert(U256::from(2), U256::from(15).into());
+        storage_info.insert(U256::from(3), U256::from(20).into());
+        storage_info.insert(U256::from(4), U256::from(20).into());
+        storage_info.insert(U256::from(5), U256::from(15).into());
+        storage_info.insert(U256::from(6), U256::from(10).into());
 
         storage_data.insert(address, storage_info);
 
