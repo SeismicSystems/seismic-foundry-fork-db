@@ -22,7 +22,8 @@ use futures::{
 use revm::{
     db::DatabaseRef,
     primitives::{
-        map::{hash_map::Entry, AddressHashMap, HashMap}, AccountInfo, Bytecode, FlaggedStorage, KECCAK_EMPTY
+        map::{hash_map::Entry, AddressHashMap, HashMap},
+        AccountInfo, Bytecode, FlaggedStorage, KECCAK_EMPTY,
     },
 };
 use std::{
