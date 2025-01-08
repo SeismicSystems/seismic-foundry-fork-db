@@ -37,7 +37,7 @@ futures = "0.3"
 
 parking_lot = "0.12"
 
-revm = { version = "18.0.0", default-features = false, features = [
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b4af3baf", default-features = false, features = [
     "std",
     "serde",
 ] }
@@ -58,4 +58,3 @@ tiny_http = "0.12"
 
 [patch.crates-io]
 alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a772c2e" }
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "caf5496f" }
