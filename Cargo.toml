@@ -37,7 +37,7 @@ futures = "0.3"
 
 parking_lot = "0.12"
 
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b4af3baf", default-features = false, features = [
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083", default-features = false, features = [
     "std",
     "serde",
 ] }
