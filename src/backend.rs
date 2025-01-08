@@ -482,7 +482,12 @@ where
                             };
 
                             // update the cache
-                            pin.db.storage().write().entry(addr).or_default().insert(idx, value.into());
+                            pin.db
+                                .storage()
+                                .write()
+                                .entry(addr)
+                                .or_default()
+                                .insert(idx, value.into());
 
                             // notify all listeners
                             if let Some(listeners) = pin.storage_requests.remove(&(addr, idx)) {

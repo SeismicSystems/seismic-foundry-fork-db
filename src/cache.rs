@@ -5,7 +5,9 @@ use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
     primitives::{
-        map::{AddressHashMap, HashMap}, Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv, FlaggedStorage, KECCAK_EMPTY
+        map::{AddressHashMap, HashMap},
+        Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv,
+        FlaggedStorage, KECCAK_EMPTY,
     },
     DatabaseCommit,
 };
