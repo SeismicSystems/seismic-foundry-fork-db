@@ -37,7 +37,7 @@ futures = "0.3"
 
 parking_lot = "0.12"
 
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083", default-features = false, features = [
+revm = { version = "18.0.0", default-features = false, features = [
     "std",
     "serde",
 ] }
@@ -55,3 +55,6 @@ url = "2"
 alloy-rpc-client = "0.8"
 alloy-transport-http = "0.8"
 tiny_http = "0.12"
+
+[patch.crates-io]
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
