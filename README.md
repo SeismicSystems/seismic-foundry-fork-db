@@ -14,7 +14,7 @@ Seismic REVM has a slightly different representation of the state tree: instead 
 ## Structure
 
 Seismic's forks of the [reth](https://github.com/paradigmxyz/reth) stack all have the same branch structure:
-- `main` or `master`: this branch consists of commits purely from the upstream repository. However it will rarely be up-to-date with upstream. The latest commit from this branch reflects how recently Seismic has merged in upstream commits to the seismic branch
+- `main` or `master`: this branch only consists of commits from the upstream repository. However it will rarely be up-to-date with upstream. The latest commit from this branch reflects how recently Seismic has merged in upstream commits to the seismic branch
 - `seismic`: the default and production branch for these repositories. This includes all Seismic-specific code essential to make our network run
 
 # foundry-fork-db
