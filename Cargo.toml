@@ -1,6 +1,6 @@
 [package]
 name = "foundry-fork-db"
-description = "Fork database used by Foundry"
+description = "Fork database used by Seismic Foundry"
 version = "0.9.0"
 edition = "2021"
 # Remember to update clippy.toml as well
@@ -54,4 +54,4 @@ alloy-transport-http = "0.8"
 tiny_http = "0.12"
 
 [patch.crates-io]
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "94040cc" }
