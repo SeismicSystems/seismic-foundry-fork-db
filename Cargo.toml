@@ -54,4 +54,4 @@ alloy-transport-http = "0.8"
 tiny_http = "0.12"
 
 [patch.crates-io]
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
