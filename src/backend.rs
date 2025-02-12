@@ -23,7 +23,7 @@ use revm::{
     db::DatabaseRef,
     primitives::{
         map::{hash_map::Entry, AddressHashMap, HashMap},
-        AccountInfo, Bytecode, KECCAK_EMPTY,
+        AccountInfo, Bytecode, FlaggedStorage, KECCAK_EMPTY,
     },
 };
 use std::{
@@ -229,7 +229,7 @@ where
                 let value =
                     self.db.storage().read().get(&addr).and_then(|acc| acc.get(&idx).copied());
                 if let Some(value) = value {
-                    let _ = sender.send(Ok(value));
+                    let _ = sender.send(Ok(value.into()));
                 } else {
                     // account present but not storage -> fetch storage
                     self.request_account_storage(addr, idx, sender);
@@ -482,7 +482,12 @@ where
                             };
 
                             // update the cache
-                            pin.db.storage().write().entry(addr).or_default().insert(idx, value);
+                            pin.db
+                                .storage()
+                                .write()
+                                .entry(addr)
+                                .or_default()
+                                .insert(idx, value.into());
 
                             // notify all listeners
                             if let Some(listeners) = pin.storage_requests.remove(&(addr, idx)) {
@@ -889,7 +894,7 @@ impl DatabaseRef for SharedBackend {
         Err(DatabaseError::MissingCode(hash))
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         trace!(target: "sharedbackend", "request storage {:?} at {:?}", address, index);
         self.do_get_storage(address, index).map_err(|err| {
             error!(target: "sharedbackend", %err, %address, %index, "Failed to send/recv `storage`");
@@ -897,7 +902,7 @@ impl DatabaseRef for SharedBackend {
                 error!(target: "sharedbackend", "{NON_ARCHIVE_NODE_WARNING}");
             }
           err
-        })
+        }).map(|v| v.into())
     }
 
     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
@@ -970,7 +975,7 @@ mod tests {
         assert_eq!(account.nonce, mem_acc.nonce);
         let slots = db.storage().read().get(&address).unwrap().clone();
         assert_eq!(slots.len(), 1);
-        assert_eq!(slots.get(&idx).copied().unwrap(), value);
+        assert_eq!(slots.get(&idx).copied().unwrap(), value.into());
 
         let num = 10u64;
         let hash = backend.block_hash_ref(num).unwrap();
@@ -1085,9 +1090,9 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(20), U256::from(10));
-        storage_info.insert(U256::from(30), U256::from(15));
-        storage_info.insert(U256::from(40), U256::from(20));
+        storage_info.insert(U256::from(20), U256::from(10).into());
+        storage_info.insert(U256::from(30), U256::from(15).into());
+        storage_info.insert(U256::from(40), U256::from(20).into());
 
         storage_data.insert(address, storage_info);
 
@@ -1102,7 +1107,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db, value.into(),
                                     "Storage in slot number {} in address {} do not have the same value", index, address
                                 );
 
@@ -1113,7 +1118,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result,
+                                    stg_db, db_result.into(),
                                     "Storage in slot number {} in address {} do not have the same value", index, address
                                 )
                             }
@@ -1209,12 +1214,12 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(1), U256::from(10));
-        storage_info.insert(U256::from(2), U256::from(15));
-        storage_info.insert(U256::from(3), U256::from(20));
-        storage_info.insert(U256::from(4), U256::from(20));
-        storage_info.insert(U256::from(5), U256::from(15));
-        storage_info.insert(U256::from(6), U256::from(10));
+        storage_info.insert(U256::from(1), U256::from(10).into());
+        storage_info.insert(U256::from(2), U256::from(15).into());
+        storage_info.insert(U256::from(3), U256::from(20).into());
+        storage_info.insert(U256::from(4), U256::from(20).into());
+        storage_info.insert(U256::from(5), U256::from(15).into());
+        storage_info.insert(U256::from(6), U256::from(10).into());
 
         let mut address_data = backend.basic_ref(address).unwrap().unwrap();
         address_data.code = None;
@@ -1243,7 +1248,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db, value.into(),
                                     "Storage in slot number {} in address {} doesn't have the same value", index, address
                                 );
 
@@ -1254,7 +1259,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result,
+                                    stg_db, db_result.into(),
                                     "Storage in slot number {} in address {} doesn't have the same value", index, address
                                 );
                             }
@@ -1280,12 +1285,12 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(1), U256::from(10));
-        storage_info.insert(U256::from(2), U256::from(15));
-        storage_info.insert(U256::from(3), U256::from(20));
-        storage_info.insert(U256::from(4), U256::from(20));
-        storage_info.insert(U256::from(5), U256::from(15));
-        storage_info.insert(U256::from(6), U256::from(10));
+        storage_info.insert(U256::from(1), U256::from(10).into());
+        storage_info.insert(U256::from(2), U256::from(15).into());
+        storage_info.insert(U256::from(3), U256::from(20).into());
+        storage_info.insert(U256::from(4), U256::from(20).into());
+        storage_info.insert(U256::from(5), U256::from(15).into());
+        storage_info.insert(U256::from(6), U256::from(10).into());
 
         storage_data.insert(address, storage_info);
 

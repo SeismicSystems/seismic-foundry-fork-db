@@ -6,7 +6,8 @@ use parking_lot::RwLock;
 use revm::{
     primitives::{
         map::{AddressHashMap, HashMap},
-        Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv, KECCAK_EMPTY,
+        Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv,
+        FlaggedStorage, KECCAK_EMPTY,
     },
     DatabaseCommit,
 };
@@ -20,7 +21,7 @@ use std::{
 };
 use url::Url;
 
-pub type StorageInfo = HashMap<U256, U256>;
+pub type StorageInfo = HashMap<U256, FlaggedStorage>;
 
 /// A shareable Block database
 #[derive(Clone, Debug)]
@@ -353,7 +354,7 @@ impl MemDb {
                     if value.present_value().is_zero() {
                         acc_storage.remove(&index);
                     } else {
-                        acc_storage.insert(index, value.present_value());
+                        acc_storage.insert(index, value.present_value().into());
                     }
                 }
                 if acc_storage.is_empty() {
@@ -501,7 +502,7 @@ impl<'de> Deserialize<'de> for JsonBlockCacheData {
         struct Data {
             meta: BlockchainDbMeta,
             accounts: AddressHashMap<AccountInfo>,
-            storage: AddressHashMap<HashMap<U256, U256>>,
+            storage: AddressHashMap<StorageInfo>,
             block_hashes: HashMap<U256, B256>,
         }
 
@@ -587,14 +588,14 @@ mod tests {
     },
     "storage": {
         "0xa354f35829ae975e850e23e9615b11da1b3dc4de": {
-            "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564": "0x5553444320795661756c74000000000000000000000000000000000000000000",
-            "0x10": "0x37fd60ff8346",
-            "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563": "0xb",
-            "0x6": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "0x5": "0x36ff5b93162e",
-            "0x14": "0x29d635a8e000",
-            "0x11": "0x63224c73",
-            "0x2": "0x6"
+            "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564": { "is_private": false, "value": "0x5553444320795661756c74000000000000000000000000000000000000000000"},
+            "0x10": { "is_private": false, "value": "0x37fd60ff8346"},
+            "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563": { "is_private": false, "value": "0xb"},
+            "0x6": { "is_private": false, "value": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"},
+            "0x5": { "is_private": false, "value": "0x36ff5b93162e"},
+            "0x14": { "is_private": false, "value": "0x29d635a8e000"},
+            "0x11": { "is_private": false, "value": "0x63224c73"},
+            "0x2": { "is_private": false, "value": "0x6"}
         }
     },
     "block_hashes": {
