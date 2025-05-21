@@ -4,12 +4,10 @@ use alloy_primitives::{Address, B256, U256};
 use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
-    primitives::{
+    context::{BlockEnv, CfgEnv}, context_interface::block::BlobExcessGasAndPrice, primitives::{
         map::{AddressHashMap, HashMap},
-        Account, AccountInfo, AccountStatus, BlobExcessGasAndPrice, BlockEnv, CfgEnv,
         FlaggedStorage, KECCAK_EMPTY,
-    },
-    DatabaseCommit,
+    }, state::{Account, AccountInfo, AccountStatus}, DatabaseCommit
 };
 use serde::{ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
@@ -131,13 +129,13 @@ pub struct BlockchainDbMeta {
 
 impl BlockchainDbMeta {
     /// Creates a new instance
-    pub fn new(env: revm::primitives::Env, url: String) -> Self {
+    pub fn new(cfg_env: CfgEnv, block_env: BlockEnv, url: String) -> Self {
         let host = Url::parse(&url)
             .ok()
             .and_then(|url| url.host().map(|host| host.to_string()))
             .unwrap_or(url);
 
-        Self { cfg_env: env.cfg.clone(), block_env: env.block, hosts: BTreeSet::from([host]) }
+        Self { cfg_env, block_env, hosts: BTreeSet::from([host]) }
     }
 
     /// Sets the chain_id in the [CfgEnv] of this instance.
@@ -154,12 +152,12 @@ impl BlockchainDbMeta {
         block: &alloy_rpc_types::Block<T, H>,
     ) -> Self {
         self.block_env = BlockEnv {
-            number: U256::from(block.header.number()),
-            coinbase: block.header.beneficiary(),
-            timestamp: U256::from(block.header.timestamp()),
+            number: block.header.number(),
+            beneficiary: block.header.beneficiary(),
+            timestamp: block.header.timestamp(),
             difficulty: U256::from(block.header.difficulty()),
-            basefee: block.header.base_fee_per_gas().map(U256::from).unwrap_or_default(),
-            gas_limit: U256::from(block.header.gas_limit()),
+            basefee: block.header.base_fee_per_gas().unwrap_or_default(),
+            gas_limit: block.header.gas_limit(),
             prevrandao: block.header.mix_hash(),
             blob_excess_gas_and_price: Some(BlobExcessGasAndPrice::new(
                 block.header.excess_blob_gas().unwrap_or_default(),
@@ -181,12 +179,12 @@ impl BlockchainDbMeta {
     }
 
     /// Sets [CfgEnv] of this instance
-    pub fn set_cfg_env(mut self, cfg_env: revm::primitives::CfgEnv) {
+    pub fn set_cfg_env(mut self, cfg_env: revm::context::CfgEnv) {
         self.cfg_env = cfg_env;
     }
 
     /// Sets the [BlockEnv] of this instance
-    pub fn set_block_env(mut self, block_env: revm::primitives::BlockEnv) {
+    pub fn set_block_env(mut self, block_env: revm::context::BlockEnv) {
         self.block_env = block_env;
     }
 }
@@ -210,7 +208,7 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
         /// default [revm::primitives::CfgEnv], for example enabling an optional feature.
         /// By hand rolling deserialize impl we can prevent cache file issues
         struct CfgEnvBackwardsCompat {
-            inner: revm::primitives::CfgEnv,
+            inner: revm::context::CfgEnv,
         }
 
         impl<'de> Deserialize<'de> for CfgEnvBackwardsCompat {
@@ -223,7 +221,7 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
                 // we check for breaking changes here
                 if let Some(obj) = value.as_object_mut() {
                     let default_value =
-                        serde_json::to_value(revm::primitives::CfgEnv::default()).unwrap();
+                        serde_json::to_value(revm::context::CfgEnv::default()).unwrap();
                     for (key, value) in default_value.as_object().unwrap() {
                         if !obj.contains_key(key) {
                             obj.insert(key.to_string(), value.clone());
@@ -231,7 +229,7 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
                     }
                 }
 
-                let cfg_env: revm::primitives::CfgEnv =
+                let cfg_env: revm::context::CfgEnv =
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(Self { inner: cfg_env })
             }
@@ -243,7 +241,7 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
         /// default [revm::primitives::BlockEnv], for example enabling an optional feature.
         /// By hand rolling deserialize impl we can prevent cache file issues
         struct BlockEnvBackwardsCompat {
-            inner: revm::primitives::BlockEnv,
+            inner: revm::context::BlockEnv,
         }
 
         impl<'de> Deserialize<'de> for BlockEnvBackwardsCompat {
@@ -256,7 +254,7 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
                 // we check for any missing fields here
                 if let Some(obj) = value.as_object_mut() {
                     let default_value =
-                        serde_json::to_value(revm::primitives::BlockEnv::default()).unwrap();
+                        serde_json::to_value(revm::context::BlockEnv::default()).unwrap();
                     for (key, value) in default_value.as_object().unwrap() {
                         if !obj.contains_key(key) {
                             obj.insert(key.to_string(), value.clone());
@@ -264,7 +262,7 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
                     }
                 }
 
-                let cfg_env: revm::primitives::BlockEnv =
+                let cfg_env: revm::context::BlockEnv =
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(Self { inner: cfg_env })
             }

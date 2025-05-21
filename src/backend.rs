@@ -18,11 +18,10 @@ use futures::{
     Future, FutureExt,
 };
 use revm::{
-    db::DatabaseRef,
     primitives::{
         map::{hash_map::Entry, AddressHashMap, HashMap},
-        AccountInfo, Bytecode, FlaggedStorage, KECCAK_EMPTY,
-    },
+        FlaggedStorage, KECCAK_EMPTY,
+    }, state::{AccountInfo, Bytecode}, DatabaseRef,
 };
 use std::{
     collections::VecDeque,

@@ -5,7 +5,7 @@ use std::{
     convert::Infallible,
     sync::{mpsc::RecvError, Arc},
 };
-
+use revm::database::DBErrorMarker;
 /// Result alias with `DatabaseError` as error
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
 
@@ -71,3 +71,5 @@ impl From<Infallible> for DatabaseError {
         match value {}
     }
 }
+
+impl DBErrorMarker for DatabaseError {}
