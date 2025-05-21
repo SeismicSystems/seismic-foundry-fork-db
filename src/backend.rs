@@ -6,12 +6,10 @@ use crate::{
 };
 use alloy_primitives::{keccak256, Address, Bytes, B256, U256};
 use alloy_provider::{
-    network::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope},
+    network::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction},
     Provider,
 };
-use alloy_rpc_types::{BlockId, Transaction};
-use alloy_serde::WithOtherFields;
-use alloy_transport::Transport;
+use alloy_rpc_types::BlockId;
 use eyre::WrapErr;
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
@@ -30,7 +28,6 @@ use std::{
     collections::VecDeque,
     fmt,
     future::IntoFuture,
-    marker::PhantomData,
     path::Path,
     pin::Pin,
     sync::{
@@ -146,9 +143,8 @@ enum BackendRequest {
 /// This handler will remain active as long as it is reachable (request channel still open) and
 /// requests are in progress.
 #[must_use = "futures do nothing unless polled"]
-pub struct BackendHandler<T, P> {
+pub struct BackendHandler<P> {
     provider: P,
-    transport: PhantomData<T>,
     /// Stores all the data.
     db: BlockchainDb,
     /// Requests currently in progress
@@ -168,10 +164,9 @@ pub struct BackendHandler<T, P> {
     block_id: Option<BlockId>,
 }
 
-impl<T, P> BackendHandler<T, P>
+impl<P> BackendHandler<P>
 where
-    T: Transport + Clone,
-    P: Provider<T, AnyNetwork> + Clone + Unpin + 'static,
+    P: Provider<AnyNetwork> + Clone + Unpin + 'static,
 {
     fn new(
         provider: P,
@@ -189,7 +184,6 @@ where
             queued_requests: Default::default(),
             incoming: rx,
             block_id,
-            transport: PhantomData,
         }
     }
 
@@ -316,9 +310,10 @@ where
         let provider = self.provider.clone();
         let fut = Box::pin(async move {
             let block = provider
-                .get_block(number, true.into())
+                .get_block(number)
+                .full()
                 .await
-                .wrap_err("could not fetch block {number:?}");
+                .wrap_err(format!("could not fetch block {number:?}"));
             (sender, block, number)
         });
 
@@ -354,10 +349,8 @@ where
                 let provider = self.provider.clone();
                 let fut = Box::pin(async move {
                     let block = provider
-                        .get_block_by_number(
-                            number.into(),
-                            alloy_rpc_types::BlockTransactionsKind::Hashes,
-                        )
+                        .get_block_by_number(number.into())
+                        .hashes()
                         .await
                         .wrap_err("failed to get block");
 
@@ -382,10 +375,9 @@ where
     }
 }
 
-impl<T, P> Future for BackendHandler<T, P>
+impl<P> Future for BackendHandler<P>
 where
-    T: Transport + Clone + Unpin,
-    P: Provider<T, AnyNetwork> + Clone + Unpin + 'static,
+    P: Provider<AnyNetwork> + Clone + Unpin + 'static,
 {
     type Output = ();
 
@@ -653,14 +645,9 @@ impl SharedBackend {
     /// dropped.
     ///
     /// NOTE: this should be called with `Arc<Provider>`
-    pub async fn spawn_backend<T, P>(
-        provider: P,
-        db: BlockchainDb,
-        pin_block: Option<BlockId>,
-    ) -> Self
+    pub async fn spawn_backend<P>(provider: P, db: BlockchainDb, pin_block: Option<BlockId>) -> Self
     where
-        T: Transport + Clone + Unpin,
-        P: Provider<T, AnyNetwork> + Unpin + 'static + Clone,
+        P: Provider<AnyNetwork> + Unpin + 'static + Clone,
     {
         let (shared, handler) = Self::new(provider, db, pin_block);
         // spawn the provider handler to a task
@@ -671,14 +658,13 @@ impl SharedBackend {
 
     /// Same as `Self::spawn_backend` but spawns the `BackendHandler` on a separate `std::thread` in
     /// its own `tokio::Runtime`
-    pub fn spawn_backend_thread<T, P>(
+    pub fn spawn_backend_thread<P>(
         provider: P,
         db: BlockchainDb,
         pin_block: Option<BlockId>,
     ) -> Self
     where
-        T: Transport + Clone + Unpin,
-        P: Provider<T, AnyNetwork> + Unpin + 'static + Clone,
+        P: Provider<AnyNetwork> + Unpin + 'static + Clone,
     {
         let (shared, handler) = Self::new(provider, db, pin_block);
 
@@ -701,14 +687,13 @@ impl SharedBackend {
     }
 
     /// Returns a new `SharedBackend` and the `BackendHandler`
-    pub fn new<T, P>(
+    pub fn new<P>(
         provider: P,
         db: BlockchainDb,
         pin_block: Option<BlockId>,
-    ) -> (Self, BackendHandler<T, P>)
+    ) -> (Self, BackendHandler<P>)
     where
-        T: Transport + Clone + Unpin,
-        P: Provider<T, AnyNetwork> + Unpin + 'static + Clone,
+        P: Provider<AnyNetwork> + Unpin + 'static + Clone,
     {
         let (backend, backend_rx) = unbounded();
         let cache = Arc::new(FlushJsonBlockCacheDB(Arc::clone(db.cache())));
@@ -738,10 +723,7 @@ impl SharedBackend {
     }
 
     /// Returns the transaction for the hash
-    pub fn get_transaction(
-        &self,
-        tx: B256,
-    ) -> DatabaseResult<WithOtherFields<Transaction<AnyTxEnvelope>>> {
+    pub fn get_transaction(&self, tx: B256) -> DatabaseResult<AnyRpcTransaction> {
         self.blocking_mode.run(|| {
             let (sender, rx) = oneshot_channel();
             let req = BackendRequest::Transaction(tx, sender);
@@ -921,14 +903,13 @@ impl DatabaseRef for SharedBackend {
 mod tests {
     use super::*;
     use crate::cache::{BlockchainDbMeta, JsonBlockCacheDB};
-    use alloy_provider::{ProviderBuilder, RootProvider};
+    use alloy_provider::ProviderBuilder;
     use alloy_rpc_client::ClientBuilder;
-    use alloy_transport_http::{Client, Http};
     use serde::Deserialize;
     use std::{collections::BTreeSet, fs, path::PathBuf};
     use tiny_http::{Response, Server};
 
-    pub fn get_http_provider(endpoint: &str) -> RootProvider<Http<Client>, AnyNetwork> {
+    pub fn get_http_provider(endpoint: &str) -> impl Provider<AnyNetwork> + Clone {
         ProviderBuilder::new()
             .network::<AnyNetwork>()
             .on_client(ClientBuilder::default().http(endpoint.parse().unwrap()))
@@ -941,11 +922,7 @@ mod tests {
         let Some(endpoint) = ENDPOINT else { return };
         let provider = get_http_provider(endpoint);
 
-        let any_rpc_block = provider
-            .get_block(BlockId::latest(), alloy_rpc_types::BlockTransactionsKind::Hashes)
-            .await
-            .unwrap()
-            .unwrap();
+        let any_rpc_block = provider.get_block(BlockId::latest()).hashes().await.unwrap().unwrap();
         let _meta = BlockchainDbMeta::default().with_block(&any_rpc_block.inner);
     }
 

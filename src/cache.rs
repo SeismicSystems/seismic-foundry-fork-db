@@ -163,6 +163,7 @@ impl BlockchainDbMeta {
             prevrandao: block.header.mix_hash(),
             blob_excess_gas_and_price: Some(BlobExcessGasAndPrice::new(
                 block.header.excess_blob_gas().unwrap_or_default(),
+                false,
             )),
         };
 
@@ -465,6 +466,11 @@ impl JsonBlockCacheDB {
 
         trace!(target: "cache", "saved json cache");
     }
+
+    /// Returns the cache path.
+    pub fn cache_path(&self) -> Option<&Path> {
+        self.cache_path.as_deref()
+    }
 }
 
 /// The Data the [JsonBlockCacheDB] can read and flush
@@ -677,5 +683,20 @@ mod tests {
         assert_eq!(cache.data.accounts.read().len(), 1);
 
         let _s = serde_json::to_string(&cache).unwrap();
+    }
+
+    #[test]
+    fn can_return_cache_path_if_set() {
+        // set
+        let cache_db = JsonBlockCacheDB::new(
+            Arc::new(RwLock::new(BlockchainDbMeta::default())),
+            Some(PathBuf::from("/tmp/foo")),
+        );
+        assert_eq!(Some(Path::new("/tmp/foo")), cache_db.cache_path());
+
+        // unset
+        let cache_db =
+            JsonBlockCacheDB::new(Arc::new(RwLock::new(BlockchainDbMeta::default())), None);
+        assert_eq!(None, cache_db.cache_path());
     }
 }
