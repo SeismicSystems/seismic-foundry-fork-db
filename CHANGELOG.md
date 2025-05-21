@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.13.0) - 2025-05-08
+
+### Dependencies
+
+- [deps] Alloy 0.15 ([#46](https://github.com/foundry-rs/foundry-fork-db/issues/46))
+
+### Features
+
+- Bump revm to `21.0.0` and alloy to `0.13.0` ([#44](https://github.com/foundry-rs/foundry-fork-db/issues/44))
+
+## [0.12.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.12.0) - 2025-03-07
+
+### Dependencies
+
+- [deps] Alloy 0.12 ([#43](https://github.com/foundry-rs/foundry-fork-db/issues/43))
+
+### Miscellaneous Tasks
+
+- Release 0.12.0
+
+## [0.11.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.11.1) - 2025-02-18
+
+### Features
+
+- Expose cache_path for JsonBlockCacheDB ([#42](https://github.com/foundry-rs/foundry-fork-db/issues/42))
+
+### Miscellaneous Tasks
+
+- Release 0.11.1
+
+## [0.11.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.11.0) - 2025-01-31
+
+### Dependencies
+
+- Bump alloy 0.11 ([#41](https://github.com/foundry-rs/foundry-fork-db/issues/41))
+
+### Miscellaneous Tasks
+
+- Release 0.11.0
+
+## [0.10.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.10.0) - 2024-12-30
+
+### Features
+
+- Update revm 19 alloy 09 ([#39](https://github.com/foundry-rs/foundry-fork-db/issues/39))
+
+### Miscellaneous Tasks
+
+- Release 0.10.0
+
 ## [0.9.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.9.0) - 2024-12-10
 
 ### Dependencies
@@ -15,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.9.0
 - Update deny.toml ([#35](https://github.com/foundry-rs/foundry-fork-db/issues/35))
 
 ### Other
