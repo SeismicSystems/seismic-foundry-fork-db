@@ -4,9 +4,15 @@ use alloy_primitives::{Address, B256, U256};
 use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
-    context::{BlockEnv, CfgEnv}, context_interface::block::BlobExcessGasAndPrice, primitives::{
-        hardfork::SpecId, map::{AddressHashMap, HashMap}, FlaggedStorage, KECCAK_EMPTY
-    }, state::{Account, AccountInfo, AccountStatus}, DatabaseCommit
+    context::{BlockEnv, CfgEnv},
+    context_interface::block::BlobExcessGasAndPrice,
+    primitives::{
+        hardfork::SpecId,
+        map::{AddressHashMap, HashMap},
+        FlaggedStorage, KECCAK_EMPTY,
+    },
+    state::{Account, AccountInfo, AccountStatus},
+    DatabaseCommit,
 };
 use serde::{ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
