@@ -1,6 +1,7 @@
 use alloy_primitives::{Address, B256, U256};
 use alloy_rpc_types::BlockId;
 use futures::channel::mpsc::{SendError, TrySendError};
+use revm::context::DBErrorMarker;
 use std::{
     convert::Infallible,
     sync::{mpsc::RecvError, Arc},
@@ -71,3 +72,5 @@ impl From<Infallible> for DatabaseError {
         match value {}
     }
 }
+
+impl DBErrorMarker for DatabaseError {}
