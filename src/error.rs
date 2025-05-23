@@ -73,4 +73,4 @@ impl From<Infallible> for DatabaseError {
     }
 }
 
-impl DBErrorMarker for DatabaseError {}
+impl revm::database::DBErrorMarker for DatabaseError {}

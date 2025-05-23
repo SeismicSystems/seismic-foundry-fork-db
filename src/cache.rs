@@ -4,12 +4,12 @@ use alloy_primitives::{Address, B256, U256};
 use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
-    context::{BlockEnv, CfgEnv},
+    context::BlockEnv,
     context_interface::block::BlobExcessGasAndPrice,
     primitives::{
         hardfork::SpecId,
         map::{AddressHashMap, HashMap},
-        FlaggedStorage, KECCAK_EMPTY,
+        KECCAK_EMPTY
     },
     state::{Account, AccountInfo, AccountStatus},
     DatabaseCommit,
@@ -23,6 +23,7 @@ use std::{
     sync::Arc,
 };
 use url::Url;
+use alloy_primitives::FlaggedStorage;
 
 pub type StorageInfo = HashMap<U256, FlaggedStorage>;
 
@@ -126,29 +127,21 @@ impl BlockchainDb {
 /// relevant identifying markers in the context of [BlockchainDb]
 #[derive(Clone, Debug, Eq, Serialize, Default)]
 pub struct BlockchainDbMeta {
-    pub cfg_env: CfgEnv,
+    /// The block environment
     pub block_env: BlockEnv,
-    /// all the hosts used to connect to
+    /// All the hosts used to connect to
     pub hosts: BTreeSet<String>,
 }
 
 impl BlockchainDbMeta {
     /// Creates a new instance
-    pub fn new(cfg_env: CfgEnv, block_env: BlockEnv, url: String) -> Self {
+    pub fn new(block_env: BlockEnv, url: String) -> Self {
         let host = Url::parse(&url)
             .ok()
             .and_then(|url| url.host().map(|host| host.to_string()))
             .unwrap_or(url);
 
-        Self { cfg_env, block_env, hosts: BTreeSet::from([host]) }
-    }
-
-    /// Sets the chain_id in the [CfgEnv] of this instance.
-    ///
-    /// Remaining fields of [CfgEnv] are left unchanged.
-    pub const fn with_chain_id(mut self, chain_id: u64) -> Self {
-        self.cfg_env.chain_id = chain_id;
-        self
+        Self { block_env, hosts: BTreeSet::from([host]) }
     }
 
     /// Sets the [BlockEnv] of this instance using the provided [alloy_rpc_types::Block]
@@ -160,7 +153,7 @@ impl BlockchainDbMeta {
             number: block.header.number(),
             beneficiary: block.header.beneficiary(),
             timestamp: block.header.timestamp(),
-            difficulty: block.header.difficulty(),
+            difficulty: U256::from(block.header.difficulty()),
             basefee: block.header.base_fee_per_gas().unwrap_or_default(),
             gas_limit: block.header.gas_limit(),
             prevrandao: block.header.mix_hash(),
@@ -183,11 +176,6 @@ impl BlockchainDbMeta {
         self
     }
 
-    /// Sets [CfgEnv] of this instance
-    pub fn set_cfg_env(mut self, cfg_env: revm::context::CfgEnv) {
-        self.cfg_env = cfg_env;
-    }
-
     /// Sets the [BlockEnv] of this instance
     pub fn set_block_env(mut self, block_env: revm::context::BlockEnv) {
         self.block_env = block_env;
@@ -198,7 +186,7 @@ impl BlockchainDbMeta {
 // case for http vs ws endpoints
 impl PartialEq for BlockchainDbMeta {
     fn eq(&self, other: &Self) -> bool {
-        self.cfg_env == other.cfg_env && self.block_env == other.block_env
+        self.block_env == other.block_env
     }
 }
 
@@ -207,39 +195,6 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
     where
         D: Deserializer<'de>,
     {
-        /// A backwards compatible representation of [revm::context::CfgEnv]
-        ///
-        /// This prevents deserialization errors of cache files caused by breaking changes to the
-        /// default [revm::context::CfgEnv], for example enabling an optional feature.
-        /// By hand rolling deserialize impl we can prevent cache file issues
-        struct CfgEnvBackwardsCompat {
-            inner: revm::context::CfgEnv,
-        }
-
-        impl<'de> Deserialize<'de> for CfgEnvBackwardsCompat {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                let mut value = serde_json::Value::deserialize(deserializer)?;
-
-                // we check for breaking changes here
-                if let Some(obj) = value.as_object_mut() {
-                    let default_cfgenv = revm::context::CfgEnv::new_with_spec(SpecId::default());
-                    let default_value = serde_json::to_value(default_cfgenv).unwrap();
-                    for (key, value) in default_value.as_object().unwrap() {
-                        if !obj.contains_key(key) {
-                            obj.insert(key.to_string(), value.clone());
-                        }
-                    }
-                }
-
-                let cfg_env: revm::context::CfgEnv =
-                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
-                Ok(Self { inner: cfg_env })
-            }
-        }
-
         /// A backwards compatible representation of [revm::primitives::BlockEnv]
         ///
         /// This prevents deserialization errors of cache files caused by breaking changes to the
@@ -276,7 +231,6 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
         // custom deserialize impl to not break existing cache files
         #[derive(Deserialize)]
         struct Meta {
-            cfg_env: CfgEnvBackwardsCompat,
             block_env: BlockEnvBackwardsCompat,
             /// all the hosts used to connect to
             #[serde(alias = "host")]
@@ -290,9 +244,8 @@ impl<'de> Deserialize<'de> for BlockchainDbMeta {
             Single(String),
         }
 
-        let Meta { cfg_env, block_env, hosts } = Meta::deserialize(deserializer)?;
+        let Meta { block_env, hosts } = Meta::deserialize(deserializer)?;
         Ok(Self {
-            cfg_env: cfg_env.inner,
             block_env: block_env.inner,
             hosts: match hosts {
                 Hosts::Multi(hosts) => hosts,

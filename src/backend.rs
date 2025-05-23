@@ -18,13 +18,14 @@ use futures::{
     Future, FutureExt,
 };
 use revm::{
+    database::DatabaseRef,
     primitives::{
         map::{hash_map::Entry, AddressHashMap, HashMap},
-        FlaggedStorage, KECCAK_EMPTY,
+        KECCAK_EMPTY
     },
     state::{AccountInfo, Bytecode},
-    DatabaseRef,
 };
+use alloy_primitives::FlaggedStorage;
 use std::{
     collections::VecDeque,
     fmt,
@@ -913,7 +914,7 @@ mod tests {
     pub fn get_http_provider(endpoint: &str) -> impl Provider<AnyNetwork> + Clone {
         ProviderBuilder::new()
             .network::<AnyNetwork>()
-            .on_client(ClientBuilder::default().http(endpoint.parse().unwrap()))
+            .connect_client(ClientBuilder::default().http(endpoint.parse().unwrap()))
     }
 
     const ENDPOINT: Option<&str> = option_env!("ETH_RPC_URL");
@@ -933,7 +934,6 @@ mod tests {
 
         let provider = get_http_provider(endpoint);
         let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
             block_env: Default::default(),
             hosts: BTreeSet::from([endpoint.to_string()]),
         };
@@ -985,7 +985,6 @@ mod tests {
 
         let provider = get_http_provider(endpoint);
         let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
             block_env: Default::default(),
             hosts: BTreeSet::from([endpoint.to_string()]),
         };
@@ -1055,7 +1054,6 @@ mod tests {
 
         let provider = get_http_provider(endpoint);
         let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
             block_env: Default::default(),
             hosts: BTreeSet::from([endpoint.to_string()]),
         };
@@ -1118,7 +1116,6 @@ mod tests {
 
         let provider = get_http_provider(endpoint);
         let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
             block_env: Default::default(),
             hosts: BTreeSet::from([endpoint.to_string()]),
         };
@@ -1172,7 +1169,6 @@ mod tests {
 
         let provider = get_http_provider(endpoint);
         let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
             block_env: Default::default(),
             hosts: BTreeSet::from([endpoint.to_string()]),
         };
@@ -1332,7 +1328,6 @@ mod tests {
 
         let provider = get_http_provider(&endpoint);
         let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
             block_env: Default::default(),
             hosts: BTreeSet::from([endpoint.to_string()]),
         };
