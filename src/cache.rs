@@ -7,7 +7,6 @@ use revm::{
     context::BlockEnv,
     context_interface::block::BlobExcessGasAndPrice,
     primitives::{
-        hardfork::SpecId,
         map::{AddressHashMap, HashMap},
         KECCAK_EMPTY
     },
