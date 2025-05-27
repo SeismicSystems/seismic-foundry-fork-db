@@ -1,6 +1,6 @@
 //! Cache related abstraction
 use alloy_consensus::BlockHeader;
-use alloy_primitives::{Address, B256, U256};
+use alloy_primitives::{Address, FlaggedStorage, B256, U256};
 use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
@@ -8,7 +8,7 @@ use revm::{
     context_interface::block::BlobExcessGasAndPrice,
     primitives::{
         map::{AddressHashMap, HashMap},
-        KECCAK_EMPTY
+        KECCAK_EMPTY,
     },
     state::{Account, AccountInfo, AccountStatus},
     DatabaseCommit,
@@ -22,7 +22,6 @@ use std::{
     sync::Arc,
 };
 use url::Url;
-use alloy_primitives::FlaggedStorage;
 
 pub type StorageInfo = HashMap<U256, FlaggedStorage>;
 

@@ -4,7 +4,7 @@ use crate::{
     cache::{BlockchainDb, FlushJsonBlockCacheDB, MemDb, StorageInfo},
     error::{DatabaseError, DatabaseResult},
 };
-use alloy_primitives::{keccak256, Address, Bytes, B256, U256};
+use alloy_primitives::{keccak256, Address, Bytes, FlaggedStorage, B256, U256};
 use alloy_provider::{
     network::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction},
     Provider,
@@ -21,11 +21,10 @@ use revm::{
     database::DatabaseRef,
     primitives::{
         map::{hash_map::Entry, AddressHashMap, HashMap},
-        KECCAK_EMPTY
+        KECCAK_EMPTY,
     },
     state::{AccountInfo, Bytecode},
 };
-use alloy_primitives::FlaggedStorage;
 use std::{
     collections::VecDeque,
     fmt,
