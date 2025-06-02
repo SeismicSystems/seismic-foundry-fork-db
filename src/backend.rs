@@ -34,10 +34,7 @@ use std::{
     },
 };
 
-use seismic_prelude::foundry::{
-    SeismicFoundry as AnyNetwork, SeismicFoundryRpcBlock as AnyRpcBlock,
-    SeismicFoundryRpcTransaction as AnyRpcTransaction,
-};
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction};
 
 /// Logged when an error is indicative that the user is trying to fork from a non-archive node.
 pub const NON_ARCHIVE_NODE_WARNING: &str = "\
@@ -316,7 +313,9 @@ where
                 .get_block(number)
                 .full()
                 .await
-                .wrap_err(format!("could not fetch block {number:?}"));
+                .wrap_err(format!("could not fetch block {number:?}"))
+                // TODO: this indicates we failed to impl a trait that makes this work automatically
+                .map(|b| b.map(|b| b.into()));
             (sender, block.map(|b| b), number)
         });
 
