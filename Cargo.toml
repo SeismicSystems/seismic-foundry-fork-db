@@ -25,6 +25,8 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+seismic-prelude = "0.0.1"
+
 alloy-primitives = { version = "1.0", features = ["map"] }
 alloy-provider = { version = "1.0.3", default-features = false }
 alloy-rpc-types = { version = "1.0.3", features = ["eth"] }
@@ -51,8 +53,10 @@ alloy-rpc-client = "1.0.3"
 tiny_http = "0.12"
 
 [patch.crates-io]
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ea3cbc6" }
 revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "8450eab" }
 
+alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
 alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
 alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
 alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
@@ -60,3 +64,5 @@ alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-al
 alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
 alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
 alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
+
+seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "3f47bf1" }
