@@ -53,7 +53,7 @@ alloy-rpc-client = "1.0.3"
 tiny_http = "0.12"
 
 [patch.crates-io]
-seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ea3cbc6" }
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "22fa38c" }
 revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "8450eab" }
 
 alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
