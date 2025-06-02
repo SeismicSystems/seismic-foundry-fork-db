@@ -313,9 +313,7 @@ where
                 .get_block(number)
                 .full()
                 .await
-                .wrap_err(format!("could not fetch block {number:?}"))
-                // TODO: this indicates we failed to impl a trait that makes this work automatically
-                .map(|b| b.map(|b| b.into()));
+                .wrap_err(format!("could not fetch block {number:?}"));
             (sender, block.map(|b| b), number)
         });
 
