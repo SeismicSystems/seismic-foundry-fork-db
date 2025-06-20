@@ -53,16 +53,21 @@ alloy-rpc-client = "1.0.5"
 tiny_http = "0.12"
 
 [patch.crates-io]
-seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "ed3d74d" }
+# seismic-foundry
+seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "30a53d5" }
+
+# seismic-alloy-core
+alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "978056b" }
+
+# seismic-revm
 revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "8450eab" }
 
-alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "ab2208a" }
-
-seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "3f47bf1" }
+# seismic-alloy
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "ed3d74d" }
