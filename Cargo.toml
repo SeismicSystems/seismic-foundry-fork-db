@@ -71,3 +71,5 @@ revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "8450
 
 # seismic-alloy
 seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "ed3d74d" }
+
+# alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
