@@ -1,10 +1,10 @@
 [package]
 name = "foundry-fork-db"
-description = "Fork database used by Seismic Foundry"
-version = "0.9.0"
+description = "Fork database used by Foundry"
+version = "0.14.0"
 edition = "2021"
 # Remember to update clippy.toml as well
-rust-version = "1.81"
+rust-version = "1.83"
 authors = ["Foundry Contributors", "Seismic Systems"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/SeismicSystems/seismic-foundry-fork-db"
@@ -16,7 +16,7 @@ rust.rust_2018_idioms = { level = "deny", priority = -1 }
 rustdoc.all = "warn"
 
 [lints.clippy]
-missing_const_for_fn = "warn"
+missing_const_for_fn = "allow" # TODO: https://github.com/rust-lang/rust-clippy/issues/14020
 use_self = "warn"
 option_if_let_else = "warn"
 
@@ -25,19 +25,19 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-alloy-primitives = { version = "0.8.15", features = ["map"] }
-alloy-provider = { version = "0.8", default-features = false }
-alloy-rpc-types = { version = "0.8", features = ["eth"] }
-alloy-serde = { version = "0.8", default-features = false }
-alloy-transport = { version = "0.8", default-features = false }
-alloy-consensus = { version = "0.8", default-features = false }
+seismic-prelude = "0.0.1"
+
+alloy-primitives = { version = "1.0", features = ["map"] }
+alloy-provider = { version = "1.0.5", default-features = false }
+alloy-rpc-types = { version = "1.0.5", features = ["eth"] }
+alloy-consensus = { version = "1.0.5", default-features = false }
 
 eyre = "0.6"
 futures = "0.3"
 
 parking_lot = "0.12"
 
-revm = { version = "18.0.0", default-features = false, features = ["std", "serde"] }
+revm = { version = "23.1.0", features = ["std", "serde"] }
 
 serde = "1.0"
 serde_json = "1.0"
@@ -49,9 +49,45 @@ tracing = "0.1"
 url = "2"
 
 [dev-dependencies]
-alloy-rpc-client = "0.8"
-alloy-transport-http = "0.8"
+alloy-rpc-client = "1.0.5"
 tiny_http = "0.12"
 
 [patch.crates-io]
-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "94040cc" }
+# seismic-foundry
+seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "a347832" }
+
+# seismic-alloy-core
+alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }
+
+alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", rev = "417644c" }
+
+# seismic-revm
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab"}
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab"}
+
+# seismic-alloy
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "d2aa119" }
+
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-serde = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-consensus-any = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-network-primitives = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-rpc-types-any = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-rpc-types-eth = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "375ba75" } # 1.0.9
