@@ -4,11 +4,8 @@ use crate::{
     cache::{BlockchainDb, FlushJsonBlockCacheDB, MemDb, StorageInfo},
     error::{DatabaseError, DatabaseResult},
 };
-use alloy_primitives::{keccak256, Address, Bytes, B256, U256};
-use alloy_provider::{
-    network::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction},
-    Provider,
-};
+use alloy_primitives::{keccak256, Address, Bytes, FlaggedStorage, B256, U256};
+use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
 use eyre::WrapErr;
 use futures::{
@@ -21,11 +18,10 @@ use revm::{
     database::DatabaseRef,
     primitives::{
         map::{hash_map::Entry, AddressHashMap, HashMap},
-        KECCAK_EMPTY
+        KECCAK_EMPTY,
     },
     state::{AccountInfo, Bytecode},
 };
-use alloy_primitives::FlaggedStorage;
 use std::{
     collections::VecDeque,
     fmt,
@@ -37,6 +33,8 @@ use std::{
         Arc,
     },
 };
+
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction};
 
 /// Logged when an error is indicative that the user is trying to fork from a non-archive node.
 pub const NON_ARCHIVE_NODE_WARNING: &str = "\
@@ -316,7 +314,7 @@ where
                 .full()
                 .await
                 .wrap_err(format!("could not fetch block {number:?}"));
-            (sender, block, number)
+            (sender, block.map(|b| b), number)
         });
 
         self.pending_requests.push(ProviderRequest::FullBlock(fut));
