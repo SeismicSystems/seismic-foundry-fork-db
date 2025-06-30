@@ -54,7 +54,7 @@ tiny_http = "0.12"
 
 [patch.crates-io]
 # seismic-foundry
-seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "3749534" }
+seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "a347832" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "5690e21" }
