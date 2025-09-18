@@ -55,7 +55,7 @@ tiny_http = "0.12"
 
 [patch.crates-io]
 # seismic-foundry
-seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", branch = "usm" }
+seismic-enclave = { git = "https://github.com/SeismicSystems/enclave.git", branch = "seismic" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "usm" }
