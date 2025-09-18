@@ -1169,7 +1169,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db, value.into(),
                                     "Storage in slot number {index} in address {address} do not have the same value"
                                 );
 
@@ -1301,7 +1301,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db, value.into(),
                                     "Storage in slot number {index} in address {address} doesn't have the same value"
                                 );
 
@@ -1312,7 +1312,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result,
+                                    stg_db, db_result.into(),
                                     "Storage in slot number {index} in address {address} doesn't have the same value"
                                 );
                             }
