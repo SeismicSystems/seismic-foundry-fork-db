@@ -3,7 +3,7 @@
 use alloy_chains::Chain;
 use alloy_consensus::BlockHeader;
 use alloy_hardforks::EthereumHardfork;
-use alloy_primitives::{Address, B256, U256, FlaggedStorage};
+use alloy_primitives::{Address, FlaggedStorage, B256, U256};
 use alloy_provider::network::TransactionResponse;
 use parking_lot::RwLock;
 use revm::{
