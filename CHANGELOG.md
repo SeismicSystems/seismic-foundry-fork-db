@@ -5,10 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.18.0) - 2025-08-25
+
+### Dependencies
+
+- Update deps ([#58](https://github.com/foundry-rs/foundry-fork-db/issues/58))
+
+### Other
+
+- Add @0xrusowsky ([#60](https://github.com/foundry-rs/foundry-fork-db/issues/60))
+- Update codeowners to improve visibility ([#59](https://github.com/foundry-rs/foundry-fork-db/issues/59))
+
+## [0.17.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.17.0) - 2025-08-18
+
+### Dependencies
+
+- [deps] Bump revm 28.0.0, msrv 1.88 required for revm ([#57](https://github.com/foundry-rs/foundry-fork-db/issues/57))
+
+### Miscellaneous Tasks
+
+- Release 0.17.0
+
+## [0.16.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.16.0) - 2025-07-10
+
+### Dependencies
+
+- [deps] Bump revm 27.0.2 ([#53](https://github.com/foundry-rs/foundry-fork-db/issues/53))
+
+### Features
+
+- Support  getAccount mode ([#48](https://github.com/foundry-rs/foundry-fork-db/issues/48))
+
+### Miscellaneous Tasks
+
+- Release 0.16.0
+- Add trace for successful cache load ([#55](https://github.com/foundry-rs/foundry-fork-db/issues/55))
+- Make clippy happy ([#54](https://github.com/foundry-rs/foundry-fork-db/issues/54))
+
+## [0.15.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.15.1) - 2025-06-13
+
+### Dependencies
+
+- Bump MSRV from 1.83 to 1.85 ([#52](https://github.com/foundry-rs/foundry-fork-db/issues/52))
+
+### Miscellaneous Tasks
+
+- Release 0.15.1
+
+### Performance
+
+- Clone for serializing ([#51](https://github.com/foundry-rs/foundry-fork-db/issues/51))
+
+## [0.15.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.15.0) - 2025-05-23
+
+### Dependencies
+
+- Bump revm to 24.0.0 ([#50](https://github.com/foundry-rs/foundry-fork-db/issues/50))
+
+### Miscellaneous Tasks
+
+- Release 0.15.0
+
 ## [0.14.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.14.0) - 2025-05-15
 
 ### Miscellaneous Tasks
 
+- Release 0.14.0
 - Alloy 1.0 ([#49](https://github.com/foundry-rs/foundry-fork-db/issues/49))
 
 ## [0.13.0](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.13.0) - 2025-05-08
@@ -274,6 +336,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous Tasks
 
 - Release 0.2.0
+
+## [0.2.1](https://github.com/foundry-rs/foundry-fork-db/releases/tag/v0.2.1) - 2024-08-08
 
 ### Other
 
