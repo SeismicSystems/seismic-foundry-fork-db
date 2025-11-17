@@ -48,7 +48,8 @@ supported. Please try to change your RPC url to an archive node if the issue per
 
 type AccountFuture<Err> =
     Pin<Box<dyn Future<Output = (Result<(U256, u64, Bytes), Err>, Address)> + Send>>;
-type StorageFuture<Err> = Pin<Box<dyn Future<Output = (Result<U256, Err>, Address, U256)> + Send>>;
+type StorageFuture<Err> =
+    Pin<Box<dyn Future<Output = (Result<FlaggedStorage, Err>, Address, U256)> + Send>>;
 type BlockHashFuture<Err> = Pin<Box<dyn Future<Output = (Result<B256, Err>, u64)> + Send>>;
 type FullBlockFuture<Err> = Pin<
     Box<dyn Future<Output = (FullBlockSender, Result<Option<AnyRpcBlock>, Err>, BlockId)> + Send>,
@@ -57,7 +58,7 @@ type TransactionFuture<Err> =
     Pin<Box<dyn Future<Output = (TransactionSender, Result<AnyRpcTransaction, Err>, B256)> + Send>>;
 
 type AccountInfoSender = OneshotSender<DatabaseResult<AccountInfo>>;
-type StorageSender = OneshotSender<DatabaseResult<U256>>;
+type StorageSender = OneshotSender<DatabaseResult<FlaggedStorage>>;
 type BlockHashSender = OneshotSender<DatabaseResult<B256>>;
 type FullBlockSender = OneshotSender<DatabaseResult<AnyRpcBlock>>;
 type TransactionSender = OneshotSender<DatabaseResult<AnyRpcTransaction>>;
@@ -237,7 +238,7 @@ where
                 let value =
                     self.db.storage().read().get(&addr).and_then(|acc| acc.get(&idx).copied());
                 if let Some(value) = value {
-                    let _ = sender.send(Ok(value.into()));
+                    let _ = sender.send(Ok(value));
                 } else {
                     // account present but not storage -> fetch storage
                     self.request_account_storage(addr, idx, sender);
@@ -279,11 +280,19 @@ where
                 let provider = self.provider.clone();
                 let block_id = self.block_id.unwrap_or_default();
                 let fut = Box::pin(async move {
-                    let storage = provider
-                        .get_storage_at(address, idx)
-                        .block_id(block_id)
+                    // Use privacy-aware storage RPC method
+                    let storage: Result<FlaggedStorage, _> = provider
+                        .raw_request(
+                            "eth_getStorageWithPrivacy".into(),
+                            vec![
+                                serde_json::to_value(address).unwrap(),
+                                serde_json::to_value(idx).unwrap(),
+                                serde_json::to_value(block_id).unwrap(),
+                            ],
+                        )
                         .await
                         .map_err(Into::into);
+
                     (storage, address, idx)
                 });
                 self.pending_requests.push(ProviderRequest::Storage(fut));
@@ -572,17 +581,13 @@ where
                             };
 
                             // update the cache
-                            pin.db
-                                .storage()
-                                .write()
-                                .entry(addr)
-                                .or_default()
-                                .insert(idx, value.into());
+                            let flagged = FlaggedStorage::from(value);
+                            pin.db.storage().write().entry(addr).or_default().insert(idx, flagged);
 
                             // notify all listeners
                             if let Some(listeners) = pin.storage_requests.remove(&(addr, idx)) {
                                 listeners.into_iter().for_each(|l| {
-                                    let _ = l.send(Ok(value));
+                                    let _ = l.send(Ok(flagged));
                                 })
                             }
                             continue;
@@ -839,7 +844,7 @@ impl SharedBackend {
         })
     }
 
-    fn do_get_storage(&self, address: Address, index: U256) -> DatabaseResult<U256> {
+    fn do_get_storage(&self, address: Address, index: U256) -> DatabaseResult<FlaggedStorage> {
         self.blocking_mode.run(|| {
             let (sender, rx) = oneshot_channel();
             let req = BackendRequest::Storage(address, index, sender);
@@ -982,7 +987,7 @@ impl DatabaseRef for SharedBackend {
                 error!(target: "sharedbackend", "{NON_ARCHIVE_NODE_WARNING}");
             }
           err
-        }).map(|v| v.into())
+        })
     }
 
     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
@@ -1169,7 +1174,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, value.value,
+                                    stg_db.value, value.value,
                                     "Storage in slot number {index} in address {address} do not have the same value"
                                 );
 
@@ -1180,7 +1185,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result.value,
+                                    stg_db, db_result,
                                     "Storage in slot number {index} in address {address} do not have the same value"
                                 )
                             }
@@ -1301,7 +1306,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, value.value,
+                                    stg_db.value, value.value,
                                     "Storage in slot number {index} in address {address} doesn't have the same value"
                                 );
 
@@ -1312,7 +1317,7 @@ mod tests {
                                 };
 
                                 assert_eq!(
-                                    stg_db, db_result.value,
+                                    stg_db, db_result,
                                     "Storage in slot number {index} in address {address} doesn't have the same value"
                                 );
                             }
