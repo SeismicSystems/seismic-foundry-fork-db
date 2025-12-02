@@ -301,14 +301,13 @@ where
                             let err_str = err.to_string();
                             if err_str.contains("Method not found") || err_str.contains("-32601") {
                                 // Fallback to standard RPC method
-                                // Note: We assume the storage is public since we can't determine privacy
-                                match provider
-                                    .get_storage_at(address, idx)
-                                    .block_id(block_id)
-                                    .await
+                                // Note: We assume the storage is public since we can't determine
+                                // privacy
+                                match provider.get_storage_at(address, idx).block_id(block_id).await
                                 {
                                     Ok(value) => {
-                                        // Convert U256 storage value to FlaggedStorage (assuming public)
+                                        // Convert U256 storage value to FlaggedStorage (assuming
+                                        // public)
                                         Ok(FlaggedStorage::from(value))
                                     }
                                     Err(fallback_err) => {
