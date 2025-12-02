@@ -280,8 +280,8 @@ where
                 let provider = self.provider.clone();
                 let block_id = self.block_id.unwrap_or_default();
                 let fut = Box::pin(async move {
-                    // Use privacy-aware storage RPC method
-                    let storage: Result<FlaggedStorage, _> = provider
+                    // Try privacy-aware storage RPC method first
+                    let storage: Result<FlaggedStorage, eyre::Report> = provider
                         .raw_request(
                             "eth_getStorageWithPrivacy".into(),
                             vec![
@@ -292,6 +292,41 @@ where
                         )
                         .await
                         .map_err(Into::into);
+
+                    // If eth_getStorageWithPrivacy fails with "Method not found",
+                    // fallback to standard eth_getStorageAt
+                    let storage = match storage {
+                        Ok(value) => Ok(value),
+                        Err(err) => {
+                            let err_str = err.to_string();
+                            if err_str.contains("Method not found") || err_str.contains("-32601") {
+                                // Fallback to standard RPC method
+                                // Note: We assume the storage is public since we can't determine privacy
+                                match provider
+                                    .get_storage_at(address, idx)
+                                    .block_id(block_id)
+                                    .await
+                                {
+                                    Ok(value) => {
+                                        // Convert U256 storage value to FlaggedStorage (assuming public)
+                                        Ok(FlaggedStorage::from(value))
+                                    }
+                                    Err(fallback_err) => {
+                                        // Both methods failed - warn the user
+                                        warn!(
+                                            target: "backendhandler",
+                                            "Failed to fetch storage: eth_getStorageWithPrivacy not supported \
+                                            and eth_getStorageAt also failed. Private storage slots cannot be \
+                                            accessed in forge scripts when using this RPC endpoint."
+                                        );
+                                        Err(fallback_err.into())
+                                    }
+                                }
+                            } else {
+                                Err(err)
+                            }
+                        }
+                    };
 
                     (storage, address, idx)
                 });
