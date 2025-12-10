@@ -283,7 +283,7 @@ where
                     // Try privacy-aware storage RPC method first
                     let storage: Result<FlaggedStorage, eyre::Report> = provider
                         .raw_request(
-                            "eth_getStorageWithPrivacy".into(),
+                            "eth_getFlaggedStorageAt".into(),
                             vec![
                                 serde_json::to_value(address).unwrap(),
                                 serde_json::to_value(idx).unwrap(),
