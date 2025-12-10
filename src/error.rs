@@ -47,7 +47,11 @@ impl DatabaseError {
             Self::GetTransaction(_, err) => Some(err),
             Self::AnyRequest(err) => Some(err),
             // Enumerate explicitly to make sure errors are updated if a new one is added.
-            Self::MissingCode(_) | Self::Recv(_) | Self::Send(_) | Self::BlockNotFound(_) | Self::PrivateStorage(_, _) => None,
+            Self::MissingCode(_)
+            | Self::Recv(_)
+            | Self::Send(_)
+            | Self::BlockNotFound(_)
+            | Self::PrivateStorage(_, _) => None,
         }
     }
 
