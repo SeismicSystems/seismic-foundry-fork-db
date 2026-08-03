@@ -2,7 +2,9 @@
 
 Fork of [foundry-fork-db](https://github.com/foundry-rs/foundry-fork-db) that adds **FlaggedStorage** support for Seismic's confidential storage layer. Used as a dependency in [seismic-foundry](https://github.com/SeismicSystems/seismic-foundry). Upstream is tracked through the `main` branch.
 
-This document focuses on Seismic-specific changes. For upstream documentation, see the `main` branch or the [upstream repo](https://github.com/foundry-rs/foundry-fork-db). For cross-repo Seismic context, see the [workspace CLAUDE.md](../CLAUDE.md).
+This document focuses on Seismic-specific changes. For upstream documentation, see the `main` branch or the [upstream repo](https://github.com/foundry-rs/foundry-fork-db).
+
+**Workspace context**: this repo is part of the multi-repo Seismic workspace. If the workspace file isn't already in your context, read `../CLAUDE.md` (sibling checkout) or fetch [CLAUDE.workspace.md](https://github.com/SeismicSystems/seismic/blob/main/workspace/CLAUDE.workspace.md) (standalone checkout/CI) for key concepts, the repo map, and cross-repo conventions.
 
 ## What This Does
 
