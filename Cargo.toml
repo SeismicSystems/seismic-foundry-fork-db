@@ -5,10 +5,10 @@ version = "0.18.0"
 edition = "2021"
 # Remember to update clippy.toml as well
 rust-version = "1.88"
-authors = ["Foundry Contributors"]
+authors = ["Foundry Contributors", "Seismic Systems"]
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/foundry-rs/foundry-fork-db"
-repository = "https://github.com/foundry-rs/foundry-fork-db"
+homepage = "https://github.com/SeismicSystems/seismic-foundry-fork-db"
+repository = "https://github.com/SeismicSystems/seismic-foundry-fork-db"
 
 [lints]
 rust.unused_must_use = "deny"
@@ -48,12 +48,36 @@ tracing = "0.1"
 
 url = "2"
 
+# seismic-prelude is only used for a few things, yet it brings with it a huge dependency chain including enclave,
+# which is why we need to patch enclave below.
+# TODO(samlaf): We might want to only depend on the exact dependency, or else add feature flags to seismic-prelude.
+seismic-prelude = "0.0.1"
+
 [dev-dependencies]
 alloy-rpc-client = "1.0.25"
 tiny_http = "0.12"
 
-# [patch.crates-io]
-# alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "a4e7099" }
-# alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "a4e7099" }
-# alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "a4e7099" }
-# alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", rev = "a4e7099" }
+[patch.crates-io]
+# seismic-alloy-core
+alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "fa63d477d6aa01e7203b677632c31cb3eba00640" }
+
+# This is needed because alloy-consensus depends on this crate for some proc macro, and the versions aren't locked together.
+# seismic-prelude -> alloy-consensus (=1.1.0 in alloy's Cargo.toml) -> alloy-tx-macros (floating version which didnt respect semver)
+alloy-tx-macros = { git = "https://github.com/alloy-rs/alloy", tag = "v1.1.0" }
+
+# seismic-revm
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e2ab654c4f8bc5e8f98d15ffe7a9880ace2f8a56" }
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e2ab654c4f8bc5e8f98d15ffe7a9880ace2f8a56" }
+
+# seismic-alloy
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "ebc3628c9e384b1db5a41044dd32756b3e79aacb" }
+
+# seismic-foundry
+seismic-enclave = { git = "https://github.com/SeismicSystems/enclave.git", rev = "ac5e28dac1ee8ec0e3922b010e6da072d6e784aa" }

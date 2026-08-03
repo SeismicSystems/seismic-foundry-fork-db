@@ -4,11 +4,8 @@ use crate::{
     cache::{BlockchainDb, FlushJsonBlockCacheDB, MemDb, StorageInfo},
     error::{DatabaseError, DatabaseResult},
 };
-use alloy_primitives::{keccak256, Address, Bytes, B256, U256};
-use alloy_provider::{
-    network::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction},
-    Provider,
-};
+use alloy_primitives::{keccak256, Address, Bytes, FlaggedStorage, B256, U256};
+use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
 use eyre::WrapErr;
 use futures::{
@@ -40,6 +37,8 @@ use std::{
 };
 use tokio::select;
 
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcBlock, AnyRpcTransaction};
+
 /// Logged when an error is indicative that the user is trying to fork from a non-archive node.
 pub const NON_ARCHIVE_NODE_WARNING: &str = "\
 It looks like you're trying to fork from an older block with a non-archive node which is not \
@@ -49,7 +48,8 @@ supported. Please try to change your RPC url to an archive node if the issue per
 
 type AccountFuture<Err> =
     Pin<Box<dyn Future<Output = (Result<(U256, u64, Bytes), Err>, Address)> + Send>>;
-type StorageFuture<Err> = Pin<Box<dyn Future<Output = (Result<U256, Err>, Address, U256)> + Send>>;
+type StorageFuture<Err> =
+    Pin<Box<dyn Future<Output = (Result<FlaggedStorage, Err>, Address, U256)> + Send>>;
 type BlockHashFuture<Err> = Pin<Box<dyn Future<Output = (Result<B256, Err>, u64)> + Send>>;
 type FullBlockFuture<Err> = Pin<
     Box<dyn Future<Output = (FullBlockSender, Result<Option<AnyRpcBlock>, Err>, BlockId)> + Send>,
@@ -58,7 +58,7 @@ type TransactionFuture<Err> =
     Pin<Box<dyn Future<Output = (TransactionSender, Result<AnyRpcTransaction, Err>, B256)> + Send>>;
 
 type AccountInfoSender = OneshotSender<DatabaseResult<AccountInfo>>;
-type StorageSender = OneshotSender<DatabaseResult<U256>>;
+type StorageSender = OneshotSender<DatabaseResult<FlaggedStorage>>;
 type BlockHashSender = OneshotSender<DatabaseResult<B256>>;
 type FullBlockSender = OneshotSender<DatabaseResult<AnyRpcBlock>>;
 type TransactionSender = OneshotSender<DatabaseResult<AnyRpcTransaction>>;
@@ -280,11 +280,19 @@ where
                 let provider = self.provider.clone();
                 let block_id = self.block_id.unwrap_or_default();
                 let fut = Box::pin(async move {
-                    let storage = provider
-                        .get_storage_at(address, idx)
-                        .block_id(block_id)
+                    // Try privacy-aware storage RPC method first
+                    let storage: Result<FlaggedStorage, eyre::Report> = provider
+                        .raw_request(
+                            "eth_getFlaggedStorageAt".into(),
+                            vec![
+                                serde_json::to_value(address).unwrap(),
+                                serde_json::to_value(idx).unwrap(),
+                                serde_json::to_value(block_id).unwrap(),
+                            ],
+                        )
                         .await
                         .map_err(Into::into);
+
                     (storage, address, idx)
                 });
                 self.pending_requests.push(ProviderRequest::Storage(fut));
@@ -413,7 +421,7 @@ where
                 .full()
                 .await
                 .wrap_err(format!("could not fetch block {number:?}"));
-            (sender, block, number)
+            (sender, block.map(|b| b), number)
         });
 
         self.pending_requests.push(ProviderRequest::FullBlock(fut));
@@ -573,12 +581,13 @@ where
                             };
 
                             // update the cache
-                            pin.db.storage().write().entry(addr).or_default().insert(idx, value);
+                            let flagged = FlaggedStorage::from(value);
+                            pin.db.storage().write().entry(addr).or_default().insert(idx, flagged);
 
                             // notify all listeners
                             if let Some(listeners) = pin.storage_requests.remove(&(addr, idx)) {
                                 listeners.into_iter().for_each(|l| {
-                                    let _ = l.send(Ok(value));
+                                    let _ = l.send(Ok(flagged));
                                 })
                             }
                             continue;
@@ -835,7 +844,7 @@ impl SharedBackend {
         })
     }
 
-    fn do_get_storage(&self, address: Address, index: U256) -> DatabaseResult<U256> {
+    fn do_get_storage(&self, address: Address, index: U256) -> DatabaseResult<FlaggedStorage> {
         self.blocking_mode.run(|| {
             let (sender, rx) = oneshot_channel();
             let req = BackendRequest::Storage(address, index, sender);
@@ -970,7 +979,7 @@ impl DatabaseRef for SharedBackend {
         Err(DatabaseError::MissingCode(hash))
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         trace!(target: "sharedbackend", "request storage {:?} at {:?}", address, index);
         self.do_get_storage(address, index).map_err(|err| {
             error!(target: "sharedbackend", %err, %address, %index, "Failed to send/recv `storage`");
@@ -1045,7 +1054,7 @@ mod tests {
         assert_eq!(account.nonce, mem_acc.nonce);
         let slots = db.storage().read().get(&address).unwrap().clone();
         assert_eq!(slots.len(), 1);
-        assert_eq!(slots.get(&idx).copied().unwrap(), value);
+        assert_eq!(slots.get(&idx).copied().unwrap(), value.into());
 
         let num = 10u64;
         let hash = backend.block_hash_ref(num).unwrap();
@@ -1148,9 +1157,9 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(20), U256::from(10));
-        storage_info.insert(U256::from(30), U256::from(15));
-        storage_info.insert(U256::from(40), U256::from(20));
+        storage_info.insert(U256::from(20), U256::from(10).into());
+        storage_info.insert(U256::from(30), U256::from(15).into());
+        storage_info.insert(U256::from(40), U256::from(20).into());
 
         storage_data.insert(address, storage_info);
 
@@ -1165,7 +1174,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db.value, value.value,
                                     "Storage in slot number {index} in address {address} do not have the same value"
                                 );
 
@@ -1263,12 +1272,12 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(1), U256::from(10));
-        storage_info.insert(U256::from(2), U256::from(15));
-        storage_info.insert(U256::from(3), U256::from(20));
-        storage_info.insert(U256::from(4), U256::from(20));
-        storage_info.insert(U256::from(5), U256::from(15));
-        storage_info.insert(U256::from(6), U256::from(10));
+        storage_info.insert(U256::from(1), U256::from(10).into());
+        storage_info.insert(U256::from(2), U256::from(15).into());
+        storage_info.insert(U256::from(3), U256::from(20).into());
+        storage_info.insert(U256::from(4), U256::from(20).into());
+        storage_info.insert(U256::from(5), U256::from(15).into());
+        storage_info.insert(U256::from(6), U256::from(10).into());
 
         let mut address_data = backend.basic_ref(address).unwrap().unwrap();
         address_data.code = None;
@@ -1297,7 +1306,7 @@ mod tests {
                         match result_storage {
                             Ok(stg_db) => {
                                 assert_eq!(
-                                    stg_db, *value,
+                                    stg_db.value, value.value,
                                     "Storage in slot number {index} in address {address} doesn't have the same value"
                                 );
 
@@ -1334,12 +1343,12 @@ mod tests {
 
         let mut storage_data = StorageData::default();
         let mut storage_info = StorageInfo::default();
-        storage_info.insert(U256::from(1), U256::from(10));
-        storage_info.insert(U256::from(2), U256::from(15));
-        storage_info.insert(U256::from(3), U256::from(20));
-        storage_info.insert(U256::from(4), U256::from(20));
-        storage_info.insert(U256::from(5), U256::from(15));
-        storage_info.insert(U256::from(6), U256::from(10));
+        storage_info.insert(U256::from(1), U256::from(10).into());
+        storage_info.insert(U256::from(2), U256::from(15).into());
+        storage_info.insert(U256::from(3), U256::from(20).into());
+        storage_info.insert(U256::from(4), U256::from(20).into());
+        storage_info.insert(U256::from(5), U256::from(15).into());
+        storage_info.insert(U256::from(6), U256::from(10).into());
 
         storage_data.insert(address, storage_info);
 
