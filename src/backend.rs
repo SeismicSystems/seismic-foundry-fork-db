@@ -563,20 +563,29 @@ where
                             let value = match resp {
                                 Ok(value) => value,
                                 Err(err) => {
-                                    // notify all listeners
-                                    let err = Arc::new(err);
-                                    if let Some(listeners) =
-                                        pin.storage_requests.remove(&(addr, idx))
-                                    {
-                                        listeners.into_iter().for_each(|l| {
-                                            let _ = l.send(Err(DatabaseError::GetStorage(
-                                                addr,
-                                                idx,
-                                                Arc::clone(&err),
-                                            )));
-                                        })
+                                    let err_str = err.to_string();
+                                    // If storage APIs are disabled, fall back to default zero value
+                                    // This allows scripts to work with nodes that have storage APIs
+                                    // disabled
+                                    if err_str.contains("Storage APIs are disabled") {
+                                        warn!(target: "backendhandler", %addr, %idx, "Storage APIs disabled, using default zero value");
+                                        FlaggedStorage::default()
+                                    } else {
+                                        // notify all listeners with the actual error
+                                        let err = Arc::new(err);
+                                        if let Some(listeners) =
+                                            pin.storage_requests.remove(&(addr, idx))
+                                        {
+                                            listeners.into_iter().for_each(|l| {
+                                                let _ = l.send(Err(DatabaseError::GetStorage(
+                                                    addr,
+                                                    idx,
+                                                    Arc::clone(&err),
+                                                )));
+                                            })
+                                        }
+                                        continue;
                                     }
-                                    continue;
                                 }
                             };
 
